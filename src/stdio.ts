@@ -46,6 +46,13 @@ async function cleanup(reason: string): Promise<void> {
   isShuttingDown = true;
   console.error(`[shutdown] ${reason} — cleaning up...`);
 
+  // Safety net: force exit if graceful shutdown hangs
+  const forceExitTimer = setTimeout(() => {
+    console.error(`[shutdown] Force exit after ${FORCE_EXIT_TIMEOUT_MS}ms`);
+    process.exit(1);
+  }, FORCE_EXIT_TIMEOUT_MS);
+  forceExitTimer.unref();
+
   // Close widget HTTP server (no-op if not listening)
   if (widgetServer.listening) {
     await new Promise<void>((resolve) => {
@@ -60,6 +67,7 @@ async function cleanup(reason: string): Promise<void> {
   try {
     await transport.close();
     console.error("[mcp] Transport closed");
+    clearTimeout(forceExitTimer);
   } catch {
     // Transport may already be closed
   }
@@ -68,24 +76,13 @@ async function cleanup(reason: string): Promise<void> {
   process.exit(0);
 }
 
-// Safety net: force exit if graceful shutdown hangs
-const forceExitTimer = setTimeout(() => {
-  console.error(`[shutdown] Force exit after ${FORCE_EXIT_TIMEOUT_MS}ms`);
-  process.exit(1);
-}, FORCE_EXIT_TIMEOUT_MS);
-// Don't keep the timer alive if we exit cleanly
-forceExitTimer.unref();
-
-// stdin close = parent process (MCP client) disconnected — primary trigger
-process.stdin.on("end", () => cleanup("stdin closed (client disconnected)"));
-
+// Only respond to explicit termination signals.
+// Do NOT listen on stdin "end" — some MCP clients (e.g. Hermes) may
+// transiently close the stdin pipe during initialization, which would
+// trigger a premature shutdown. StdioServerTransport handles its own
+// connection lifecycle internally.
 process.on("SIGINT", () => cleanup("SIGINT"));
 process.on("SIGTERM", () => cleanup("SIGTERM"));
-
-// Prevent unhandled rejections from crashing the process during shutdown
-process.on("unhandledRejection", (reason) => {
-  console.error(`[shutdown] Unhandled rejection: ${reason}`);
-});
 
 // ── Widget HTTP server ───────────────────────────────────────────────────
 const widgetServer: Server = createServer(serveStatic(join("dist", "resources", "widgets")));
