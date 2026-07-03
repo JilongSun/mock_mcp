@@ -122,7 +122,9 @@ Open [http://localhost:8760/inspector](http://localhost:8760/inspector) to explo
 }
 ```
 
-### stdio mode (with widget asset serving)
+### stdio mode
+
+Widgets are HTTP-only (require a browser to render). All other capabilities — tools, resources, prompts, elicitation, sampling, roots, progress, logging — are fully available over stdio.
 
 ```json
 {
@@ -130,16 +132,21 @@ Open [http://localhost:8760/inspector](http://localhost:8760/inspector) to explo
     "enterprise-ops-hub": {
       "command": "npx",
       "args": ["tsx", "src/stdio.ts"],
-      "cwd": "/path/to/mock_mcp",
-      "env": {
-        "WIDGET_PORT": "8761"
-      }
+      "cwd": "/path/to/mock_mcp"
     }
   }
 }
 ```
 
-The server exposes **identical capabilities** in both modes. In stdio mode, MCP protocol messages flow over stdin/stdout, while widget assets are served on `WIDGET_PORT` (default `8761`).
+Or with the built output:
+
+```json
+{
+  "command": "node",
+  "args": ["dist/src/stdio.js"],
+  "cwd": "/path/to/mock_mcp"
+}
+```
 
 ## Scripts
 
