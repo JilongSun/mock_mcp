@@ -22,7 +22,7 @@ export const server = new MCPServer({
     "Enterprise operations platform providing team directory, product catalog, order management, knowledge base, location intelligence, analytics, and DevOps monitoring — all accessible through MCP tools, resources, prompts, and interactive visual widgets.",
   instructions:
     "You have access to the Enterprise Operations Hub. Use the tools to search users, browse products, manage orders, explore locations, generate reports, search the knowledge base, and monitor system health. Use the visual widgets for rich data presentation. For sensitive actions, use the approval workflow tools.",
-  baseUrl: process.env.MCP_URL || "http://localhost:8760",
+  baseUrl: process.env.MCP_URL || `http://localhost:${process.env.PORT || "8760"}`,
   favicon: "favicon.ico",
   websiteUrl: "https://github.com",
   icons: [
@@ -369,10 +369,8 @@ server.tool(
         `Summarize the following text in no more than ${params.maxLength} words:\n\n${params.text}`,
         { maxTokens: params.maxLength * 3 },
       );
-      const summary = result.content
-        .filter((c: { type: string }) => c.type === "text")
-        .map((c: { text: string }) => c.text)
-        .join("\n");
+      // content is a discriminated union in newer SDK (not an array)
+      const summary = result.content.type === "text" ? result.content.text : "";
       return object({ supported: true, summary, model: result.model ?? "unknown", note: "Summary generated via client sampling." });
     } catch (err) {
       return object({ supported: true, summary: `Sampling failed: ${err instanceof Error ? err.message : String(err)}`, model: "", note: "Sampling request failed. The client may have rejected it." });
@@ -418,7 +416,7 @@ server.tool(
       user: user ? {
         subject: user.subject ?? "unknown",
         locale: user.locale ?? "unknown",
-        timezone: user.timezone ?? `UTC${user.timezoneOffsetMinutes != null ? (user.timezoneOffsetMinutes >= 0 ? "+" : "") + user.timezoneOffsetMinutes / 60 : "?"}`,
+        timezone: user.location?.timezone ?? `UTC${user.timezoneOffsetMinutes != null ? (user.timezoneOffsetMinutes >= 0 ? "+" : "") + user.timezoneOffsetMinutes / 60 : "?"}`,
         location: loc ? [loc.city, loc.region, loc.country].filter(Boolean).join(", ") || "unknown" : "unknown",
       } : null,
       sessionId: ctx.session.sessionId,

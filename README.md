@@ -107,6 +107,25 @@ npm run dev        # HTTP mode with hot reload + inspector + widgets
 
 Open [http://localhost:8760/inspector](http://localhost:8760/inspector) to explore all tools, resources, and widgets interactively.
 
+### Multi-Worker Deployment
+
+When you need to handle higher concurrency or isolate workloads, launch multiple server instances with a single command:
+
+```bash
+# Start 3 workers on ports 8760, 8759, 8758
+npm run start:multi -- --workers 3
+
+# Shorthand with -w flag
+npm run start:multi -- -w 5
+```
+
+Each worker runs as an independent process with its own port, decrementing from 8760. Press `Ctrl+C` to gracefully shut down all workers.
+
+**Use cases:**
+- **Load distribution** — spread incoming MCP client connections across multiple instances behind a reverse proxy (nginx, HAProxy)
+- **Workload isolation** — dedicated workers for different agent teams or environments (staging vs. production)
+- **Graceful rolling restarts** — restart workers one at a time without dropping connections
+
 ## Client Configuration
 
 ### HTTP mode
@@ -154,5 +173,6 @@ Or with the built output:
 |---------|-------------|
 | `npm run dev` | Development server with hot reload, inspector, and widgets |
 | `npm run build` | Production build (TypeScript compilation + widget bundling) |
-| `npm run start` | Production HTTP server |
+| `npm run start` | Production HTTP server (single instance, port 8760) |
+| `npm run start:multi -- --workers N` | Launch N production workers (ports 8760, 8759, ...) |
 | `npx tsx src/stdio.ts` | stdio mode for local agent integration |
