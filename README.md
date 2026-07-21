@@ -2,7 +2,7 @@
 
 An **MCP-native enterprise operations platform** that unifies team management, product catalog, order processing, knowledge base, location intelligence, analytics, and DevOps monitoring into a single server — all accessible from any MCP-compatible AI agent or client.
 
-With 15 tools, 4 resources, 3 prompts, and 3 rich visual widgets, agents can search users, browse product catalogs, manage orders, generate reports, explore points of interest on interactive maps, and monitor system health — without switching contexts or integrating multiple APIs.
+With 15 tools, 7 resources (4 data resources + 3 interactive visual widget resources), and 3 prompts, agents can search users, browse product catalogs, manage orders, generate reports, explore points of interest on interactive maps, and monitor system health — without switching contexts or integrating multiple APIs.
 
 ---
 
@@ -45,7 +45,7 @@ Monitor system health through the agent:
 
 - `search-knowledge` — full-text search across the knowledge base (account, API, and general categories)
 - `create-document` — create reports, memos, guides, or specs with tag-based categorization
-- Resources provide structured reference data: POI type catalog, server configuration, API docs, and dataset statistics
+- Resources provide structured reference data: POI type catalog, server configuration, API docs, dataset statistics, and interactive visual widgets
 
 ---
 
@@ -53,32 +53,46 @@ Monitor system health through the agent:
 
 ### Tools (15)
 
-| Category | Tool | Widget | Description |
-|----------|------|--------|-------------|
-| **People** | `search-users` | ✅ User Cards | Search team members by name, role, or department |
-| **Catalog** | `get-product-details` | ❌ | Look up product info, stock, and ratings by ID |
-| **Orders** | `list-orders` | ✅ Data Table | Paginated orders with status filtering and expandable items |
-| **Content** | `create-document` | ❌ | Create reports, memos, guides, and specs |
-| **Content** | `search-knowledge` | ❌ | Full-text search across help articles and documentation |
-| **Location** | `get-location-info` | ✅ Interactive Map | Explore nearby POIs with colored pins and details |
-| **Analytics** | `generate-report` | ❌ | Sales, usage, performance, or security reports with metrics |
-| **DevOps** | `get-server-status` | ❌ | Uptime, connections, CPU, memory, and request metrics |
-| **Workflow** | `request-approval` | ❌ | Human-in-the-loop approval for sensitive actions |
-| **Workflow** | `collect-feedback` | ❌ | Structured rating and comment collection |
-| **AI** | `summarize-text` | ❌ | Delegate summarization to the client's LLM |
-| **Debug** | `list-client-capabilities` | ❌ | Introspect connected client features |
-| **Debug** | `get-user-context` | ❌ | Current user identity, locale, and timezone |
-| **Debug** | `list-roots` | ❌ | Filesystem roots shared by the client |
-| **Debug** | `slow-operation` | ❌ | Multi-step operation with progress notifications |
+| Category | Tool | Description |
+|----------|------|-------------|
+| **People** | `search-users` | Search team members by name, role, or department |
+| **Catalog** | `get-product-details` | Look up product info, stock, and ratings by ID |
+| **Orders** | `list-orders` | Paginated orders with status filtering and expandable items |
+| **Content** | `create-document` | Create reports, memos, guides, and specs |
+| **Content** | `search-knowledge` | Full-text search across help articles and documentation |
+| **Location** | `get-location-info` | Explore nearby POIs with colored pins and details |
+| **Analytics** | `generate-report` | Sales, usage, performance, or security reports with metrics |
+| **DevOps** | `get-server-status` | Uptime, connections, CPU, memory, and request metrics |
+| **Workflow** | `request-approval` | Human-in-the-loop approval for sensitive actions |
+| **Workflow** | `collect-feedback` | Structured rating and comment collection |
+| **AI** | `summarize-text` | Delegate summarization to the client's LLM |
+| **Debug** | `list-client-capabilities` | Introspect connected client features |
+| **Debug** | `get-user-context` | Current user identity, locale, and timezone |
+| **Debug** | `list-roots` | Filesystem roots shared by the client |
+| **Debug** | `slow-operation` | Multi-step operation with progress notifications |
 
-### Resources (4)
+### Resources (7)
 
-| URI | Content |
-|-----|---------|
-| `data://poi-types` | POI type catalog with icons, labels, and colors |
-| `config://server-info` | Server version, capabilities, and configuration limits |
-| `docs://api-reference` | Markdown API reference for all tools and parameters |
-| `data://mock-stats` | Live dataset counts and distribution breakdowns |
+Resources are the backbone of data access in MCP. The server exposes **4 static data resources** and **3 interactive widget resources** that render rich visual experiences in MCP-compatible clients.
+
+#### Static Data Resources
+
+| URI | Type | Description |
+|-----|------|-------------|
+| `data://poi-types` | `application/json` | POI type catalog with icons, labels, and colors |
+| `config://server-info` | `application/json` | Server version, capabilities, and configuration limits |
+| `docs://api-reference` | `text/markdown` | Markdown API reference for all tools and parameters |
+| `data://mock-stats` | `application/json` | Live dataset counts and distribution breakdowns |
+
+#### Visual Widget Resources
+
+Widgets are a special kind of resource — they are served at `app://` URIs and deliver interactive React-based UIs rendered directly in the MCP client. Each widget is associated with a tool that triggers it.
+
+| URI | Widget | Triggered By | Experience |
+|-----|--------|-------------|------------|
+| `app://user-search-results` | **User Search Results** | `search-users` | Role-badged user cards with avatars, departments, and join dates |
+| `app://order-list` | **Order List** | `list-orders` | Paginated table with color-coded status badges, expandable line items |
+| `app://location-map` | **Location Map** | `get-location-info` | CSS grid map with colored POI pins, clickable details with ratings and addresses |
 
 ### Prompts (3)
 
@@ -87,14 +101,6 @@ Monitor system health through the agent:
 | `explore-locations` | Guided template for POI discovery workflows |
 | `analyze-orders` | Template for order data analysis (status, revenue, customers, trends) |
 | `generate-data` | Template for creating structured data records |
-
-### Visual Widgets (3)
-
-| Widget | Triggered By | Experience |
-|--------|-------------|------------|
-| **User Search Results** | `search-users` | Role-badged user cards with avatars, departments, and join dates |
-| **Order List** | `list-orders` | Paginated table with color-coded status badges, expandable line items |
-| **Location Map** | `get-location-info` | CSS grid map with colored POI pins, clickable details with ratings and addresses |
 
 ---
 
@@ -143,7 +149,7 @@ Each worker runs as an independent process with its own port, decrementing from 
 
 ### stdio mode
 
-Widgets are HTTP-only (require a browser to render). All other capabilities — tools, resources, prompts, elicitation, sampling, roots, progress, logging — are fully available over stdio.
+Widget resources (`app://*`) are HTTP-only (require a browser to render). All other capabilities — tools, static resources, prompts, elicitation, sampling, roots, progress, logging — are fully available over stdio.
 
 ```json
 {

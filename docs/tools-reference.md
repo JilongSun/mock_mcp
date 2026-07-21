@@ -1,6 +1,6 @@
 # Mock MCP Server — Tool Reference
 
-> 15 tools · 4 resources · 3 prompts · 3 widgets  
+> 15 tools · 7 resources (4 data + 3 widgets) · 3 prompts  
 > Built for testing [mcpapps-bridge](https://github.com) with Hermes and other MCP clients.
 
 ---
@@ -22,16 +22,16 @@ Tools marked with 🧪 test whether the bridge correctly handles specific `Clien
 
 ### Base CRUD (8 tools)
 
-| # | Tool | Widget | Description |
-|---|------|--------|-------------|
-| 1 | `search-users` | ✅ user-search-results | Search mock users by name, role, or department |
-| 2 | `get-product-details` | ❌ | Get detailed info about a mock product by ID |
-| 3 | `list-orders` | ✅ order-list | Paginated order listing with status filter |
-| 4 | `create-document` | ❌ | Simulate document creation (no-op, mock only) |
-| 5 | `get-location-info` | ✅ location-map | Find nearby POIs around a lat/lng coordinate |
-| 6 | `generate-report` | ❌ | Generate a mock analytics report |
-| 7 | `search-knowledge` | ❌ | Full-text search the mock knowledge base |
-| 8 | `get-server-status` | ❌ | Mock server health and metrics |
+| # | Tool | Description |
+|---|------|-------------|
+| 1 | `search-users` | Search mock users by name, role, or department |
+| 2 | `get-product-details` | Get detailed info about a mock product by ID |
+| 3 | `list-orders` | Paginated order listing with status filter |
+| 4 | `create-document` | Simulate document creation (no-op, mock only) |
+| 5 | `get-location-info` | Find nearby POIs around a lat/lng coordinate |
+| 6 | `generate-report` | Generate a mock analytics report |
+| 7 | `search-knowledge` | Full-text search the mock knowledge base |
+| 8 | `get-server-status` | Mock server health and metrics |
 
 ### Bridge Capability Tests (7 tools) 🧪
 
@@ -82,7 +82,9 @@ Verifies the bridge forwards progress notifications.
 
 ---
 
-## Resources
+## Resources (7)
+
+### Static Data Resources
 
 | URI | Description |
 |-----|-------------|
@@ -91,6 +93,16 @@ Verifies the bridge forwards progress notifications.
 | `docs://api-reference` | Markdown API reference for all tools |
 | `data://mock-stats` | Dataset counts and distributions |
 
+### Visual Widget Resources
+
+Widgets are interactive UI resources served at `app://` URIs. They are dual-registered as both MCP tools and resources — tools trigger them, and `app://` URIs provide direct resource-level access.
+
+| URI | Widget | Triggered By | Visual |
+|-----|--------|-------------|--------|
+| `app://user-search-results` | `user-search-results` | `search-users` | User cards with role badges and avatars |
+| `app://order-list` | `order-list` | `list-orders` | Paginated table with status badges, expandable items |
+| `app://location-map` | `location-map` | `get-location-info` | CSS grid map with colored POI pins, clickable details |
+
 ## Prompts
 
 | Name | Description |
@@ -98,14 +110,6 @@ Verifies the bridge forwards progress notifications.
 | `explore-locations` | Template for exploring nearby POIs |
 | `analyze-orders` | Template for order data analysis |
 | `generate-mock-data` | Template for creating mock data records |
-
-## Widgets
-
-| Name | Tool | Visual |
-|------|------|--------|
-| `user-search-results` | `search-users` | User cards with role badges and avatars |
-| `order-list` | `list-orders` | Paginated table with status badges, expandable items |
-| `location-map` | `get-location-info` | CSS grid map with colored POI pins, clickable details |
 
 ---
 
