@@ -95,13 +95,13 @@ Verifies the bridge forwards progress notifications.
 
 ### Visual Widget Resources
 
-Widgets are interactive UI resources served at `app://` URIs. They are dual-registered as both MCP tools and resources — tools trigger them, and `app://` URIs provide direct resource-level access.
+Widgets follow the MCP `ui://` URI scheme (`ui://widget/{name}.html`). Unlike static resources (`data://`, `config://`, `docs://`) that return raw content, widget resources deliver interactive React-based UIs. They are dual-registered as both MCP tools and resources — tools populate them with data, `ui://` URIs access them directly as resources.
 
 | URI | Widget | Triggered By | Visual |
 |-----|--------|-------------|--------|
-| `app://user-search-results` | `user-search-results` | `search-users` | User cards with role badges and avatars |
-| `app://order-list` | `order-list` | `list-orders` | Paginated table with status badges, expandable items |
-| `app://location-map` | `location-map` | `get-location-info` | CSS grid map with colored POI pins, clickable details |
+| `ui://widget/user-search-results.html` | `user-search-results` | `search-users` | User cards with role badges and avatars |
+| `ui://widget/order-list.html` | `order-list` | `list-orders` | Paginated table with status badges, expandable items |
+| `ui://widget/location-map.html` | `location-map` | `get-location-info` | CSS grid map with colored POI pins, clickable details |
 
 ## Prompts
 

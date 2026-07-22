@@ -86,13 +86,13 @@ Resources are the backbone of data access in MCP. The server exposes **4 static 
 
 #### Visual Widget Resources
 
-Widgets are a special kind of resource — they are served at `app://` URIs and deliver interactive React-based UIs rendered directly in the MCP client. Each widget is associated with a tool that triggers it.
+Widgets are a special type of resource following the MCP `ui://` URI scheme. Unlike static resources (`data://`, `config://`, `docs://`) which return raw content, widget resources deliver interactive React-based UIs rendered directly in the MCP client. Each widget is also associated with a tool that populates it with dynamic data.
 
 | URI | Widget | Triggered By | Experience |
 |-----|--------|-------------|------------|
-| `app://user-search-results` | **User Search Results** | `search-users` | Role-badged user cards with avatars, departments, and join dates |
-| `app://order-list` | **Order List** | `list-orders` | Paginated table with color-coded status badges, expandable line items |
-| `app://location-map` | **Location Map** | `get-location-info` | CSS grid map with colored POI pins, clickable details with ratings and addresses |
+| `ui://widget/user-search-results.html` | **User Search Results** | `search-users` | Role-badged user cards with avatars, departments, and join dates |
+| `ui://widget/order-list.html` | **Order List** | `list-orders` | Paginated table with color-coded status badges, expandable line items |
+| `ui://widget/location-map.html` | **Location Map** | `get-location-info` | CSS grid map with colored POI pins, clickable details with ratings and addresses |
 
 ### Prompts (3)
 
@@ -149,7 +149,7 @@ Each worker runs as an independent process with its own port, decrementing from 
 
 ### stdio mode
 
-Widget resources (`app://*`) are HTTP-only (require a browser to render). All other capabilities — tools, static resources, prompts, elicitation, sampling, roots, progress, logging — are fully available over stdio.
+Widget resources (`ui://widget/*`) are HTTP-only (require a browser to render). All other capabilities — tools, static resources, prompts, elicitation, sampling, roots, progress, logging — are fully available over stdio.
 
 ```json
 {
