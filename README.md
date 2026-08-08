@@ -101,4 +101,4 @@ This project is a mock server for protocol version testing. Two packages serve d
 
 Both packages share mock data via `@mock-mcp/shared`.
 
-For full capability details, see [`docs/tools-reference.md`](./docs/tools-reference.md). For architecture decisions, see [`docs/adr/`](./docs/adr/).
+For full capability details, see [`docs/server-capabilities.md`](./docs/server-capabilities.md). For architecture decisions, see [`docs/adr/`](./docs/adr/).
