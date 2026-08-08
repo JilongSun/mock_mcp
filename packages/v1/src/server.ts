@@ -9,9 +9,9 @@ import {
   mockProducts,
   mockUsers,
   paginate,
-} from "./mock-data.js";
-import { mockDelay } from "./mock-delay.js";
-import type { MockLocation, MockOrder } from "./mock-data.js";
+} from "@mock-mcp/shared";
+import { mockDelay } from "@mock-mcp/shared";
+import type { MockLocation, MockOrder } from "@mock-mcp/shared";
 
 // ─── Server ──────────────────────────────────────────────────────────
 export const server = new MCPServer({

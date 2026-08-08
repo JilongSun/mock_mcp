@@ -1,47 +1,14 @@
 {
-  "name": "mock_mcp",
+  "name": "mock-mcp",
+  "private": true,
   "type": "module",
-  "version": "1.0.0",
-  "description": "MCP server: mock_mcp",
-  "author": "",
-  "license": "MIT",
-  "keywords": [
-    "mcp",
-    "server",
-    "starter",
-    "tools",
-    "resources",
-    "prompts",
-    "uiresource",
-    "ui",
-    "react",
-    "widgets",
-    "mcp-ui",
-    "apps-sdk"
-  ],
-  "main": "dist/index.js",
   "scripts": {
-    "build": "mcp-use build",
-    "dev": "mcp-use dev --port 8760",
-    "start": "mcp-use start --port 8760",
-    "start:multi": "tsx cli.ts",
-    "deploy": "mcp-use deploy",
-    "postinstall": "mcp-use generate-types || exit 0"
+    "dev:v1": "pnpm --filter @mock-mcp/v1 dev",
+    "build:v1": "pnpm --filter @mock-mcp/v1 build",
+    "start:v1": "pnpm --filter @mock-mcp/v1 start",
+    "start:v1:multi": "pnpm --filter @mock-mcp/v1 start:multi"
   },
-  "dependencies": {
-    "@openai/apps-sdk-ui": "^0.2.1",
-    "mcp-use": "latest",
-    "react": "^19.2.4",
-    "react-dom": "^19.2.4",
-    "react-router": "^7.13.0",
-    "tailwindcss": "^4.2.0",
-    "zod": "4.3.5"
-  },
-  "devDependencies": {
-    "@types/node": "^25.3.0",
-    "@types/react": "^19.2.14",
-    "@types/react-dom": "^19.2.3",
-    "tsx": "^4.21.0",
-    "typescript": "^5.9.3"
+  "engines": {
+    "node": ">=20"
   }
 }
