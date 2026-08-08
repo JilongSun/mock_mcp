@@ -1,140 +1,67 @@
-# Enterprise Operations Hub (MCP Server)
+# Mock MCP Server
 
-An **MCP-native enterprise operations platform** that unifies team management, product catalog, order processing, knowledge base, location intelligence, analytics, and DevOps monitoring into a single server — all accessible from any MCP-compatible AI agent or client.
+A mock [Model Context Protocol](https://modelcontextprotocol.io) server for testing MCP bridges, clients, and protocol version negotiation. Provides a realistic enterprise operations dataset with tools, resources, prompts, and interactive widgets — no real APIs or databases required.
 
-With 15 tools, 7 resources (4 data resources + 3 interactive visual widget resources), and 3 prompts, agents can search users, browse product catalogs, manage orders, generate reports, explore points of interest on interactive maps, and monitor system health — without switching contexts or integrating multiple APIs.
-
----
-
-## Use Cases
-
-### 🤖 AI-Powered Enterprise Assistant
-
-Equip your AI agent with direct access to company data. Ask natural language questions like:
-
-- *"Find all developers in the Engineering team"* → `search-users` tool with role filter and visual user cards
-- *"Show me shipped orders from this week"* → `list-orders` tool with paginated table and status badges
-- *"What's our top-selling product?"* → `get-product-details` across the catalog with ratings and inventory data
-- *"Generate a sales report for Q4"* → `generate-report` with revenue, conversion, and customer metrics
-
-### 🗺️ Location-Based Decision Making
-
-The `get-location-info` tool + `location-map` widget delivers an interactive point-of-interest explorer:
-
-- *"Find restaurants near the conference venue"* → visual map with colored pins by POI type
-- *"Are there any parks close to the hotel?"* → filtered by park type, with ratings and addresses
-- Filter by restaurant, park, museum, café, hotel, shopping, or landmark — adjust radius from 0.01 to 50 km
-
-### 📋 Workflow Automation with Approvals
-
-The server supports human-in-the-loop elicitation workflows:
-
-- **Approval gates** — `request-approval` tool presents confirmation dialogs for sensitive actions (deploy, delete, grant access)
-- **Feedback collection** — `collect-feedback` tool gathers structured ratings and comments from users
-- **Text summarization** — `summarize-text` delegates to the client's LLM for on-demand summarization via the sampling protocol
-
-### 📊 Real-Time Operations Dashboard
-
-Monitor system health through the agent:
-
-- `get-server-status` — uptime, request volume, active connections, CPU/memory usage
-- `list-client-capabilities` — introspect what the connected client supports (roots, sampling, elicitation, apps)
-- `get-user-context` — retrieve the current user's locale, timezone, and location for personalized responses
-
-### 📚 Knowledge Management
-
-- `search-knowledge` — full-text search across the knowledge base (account, API, and general categories)
-- `create-document` — create reports, memos, guides, or specs with tag-based categorization
-- Resources provide structured reference data: POI type catalog, server configuration, API docs, dataset statistics, and interactive visual widgets
+Detailed tool reference, capability descriptions, and client configuration guides are in [`docs/`](./docs/).
 
 ---
 
-## Capabilities at a Glance
+## Project Structure
 
-### Tools (15)
-
-| Category | Tool | Description |
-|----------|------|-------------|
-| **People** | `search-users` | Search team members by name, role, or department |
-| **Catalog** | `get-product-details` | Look up product info, stock, and ratings by ID |
-| **Orders** | `list-orders` | Paginated orders with status filtering and expandable items |
-| **Content** | `create-document` | Create reports, memos, guides, and specs |
-| **Content** | `search-knowledge` | Full-text search across help articles and documentation |
-| **Location** | `get-location-info` | Explore nearby POIs with colored pins and details |
-| **Analytics** | `generate-report` | Sales, usage, performance, or security reports with metrics |
-| **DevOps** | `get-server-status` | Uptime, connections, CPU, memory, and request metrics |
-| **Workflow** | `request-approval` | Human-in-the-loop approval for sensitive actions |
-| **Workflow** | `collect-feedback` | Structured rating and comment collection |
-| **AI** | `summarize-text` | Delegate summarization to the client's LLM |
-| **Debug** | `list-client-capabilities` | Introspect connected client features |
-| **Debug** | `get-user-context` | Current user identity, locale, and timezone |
-| **Debug** | `list-roots` | Filesystem roots shared by the client |
-| **Debug** | `slow-operation` | Multi-step operation with progress notifications |
-
-### Resources (7)
-
-Resources are the backbone of data access in MCP. The server exposes **4 static data resources** and **3 interactive widget resources** that render rich visual experiences in MCP-compatible clients.
-
-#### Static Data Resources
-
-| URI | Type | Description |
-|-----|------|-------------|
-| `data://poi-types` | `application/json` | POI type catalog with icons, labels, and colors |
-| `config://server-info` | `application/json` | Server version, capabilities, and configuration limits |
-| `docs://api-reference` | `text/markdown` | Markdown API reference for all tools and parameters |
-| `data://mock-stats` | `application/json` | Live dataset counts and distribution breakdowns |
-
-#### Visual Widget Resources
-
-Widgets are a special type of resource following the MCP `ui://` URI scheme. Unlike static resources (`data://`, `config://`, `docs://`) which return raw content, widget resources deliver interactive React-based UIs rendered directly in the MCP client. Each widget is also associated with a tool that populates it with dynamic data.
-
-| URI | Widget | Triggered By | Experience |
-|-----|--------|-------------|------------|
-| `ui://widget/user-search-results.html` | **User Search Results** | `search-users` | Role-badged user cards with avatars, departments, and join dates |
-| `ui://widget/order-list.html` | **Order List** | `list-orders` | Paginated table with color-coded status badges, expandable line items |
-| `ui://widget/location-map.html` | **Location Map** | `get-location-info` | CSS grid map with colored POI pins, clickable details with ratings and addresses |
-
-### Prompts (3)
-
-| Prompt | Purpose |
-|--------|---------|
-| `explore-locations` | Guided template for POI discovery workflows |
-| `analyze-orders` | Template for order data analysis (status, revenue, customers, trends) |
-| `generate-data` | Template for creating structured data records |
+```
+mock_mcp/
+├── packages/
+│   ├── shared/        # @mock-mcp/shared — mock data & utilities
+│   ├── v1/            # @mock-mcp/v1    — mcp-use@1.32.1 (implemented)
+│   └── v2/            # @mock-mcp/v2    — mcp-use@2.x   (planned)
+├── public/            # Static assets
+├── docs/              # Tool reference, capability docs & ADRs
+└── README.md
+```
 
 ---
 
 ## Quick Start
 
 ```bash
-npm install
-npm run dev        # HTTP mode with hot reload + inspector + widgets
+pnpm install
+pnpm dev:v1       # Run the v1 server (legacy MCP protocol)
 ```
 
-Open [http://localhost:8760/inspector](http://localhost:8760/inspector) to explore all tools, resources, and widgets interactively.
+Open [http://localhost:8760/inspector](http://localhost:8760/inspector) to explore tools, resources, and widgets interactively.
 
-### Multi-Worker Deployment
+> **v2 is currently in planning.** The `mcp-use@2` API surface is still evolving (canary releases). See [ADR 001](./docs/adr/001-monorepo-and-protocol-version-strategy.md) for the migration strategy and rationale. v1 remains the stable, tested version.
 
-When you need to handle higher concurrency or isolate workloads, launch multiple server instances with a single command:
+---
+
+## Multi-Worker Deployment
 
 ```bash
-# Start 3 workers on ports 8760, 8759, 8758
-npm run start:multi -- --workers 3
+# v1 — 3 workers on ports 8760, 8759, 8758
+pnpm start:v1:multi -- --workers 3
 
-# Shorthand with -w flag
-npm run start:multi -- -w 5
+# Shorthand
+pnpm start:v1:multi -- -w 5
 ```
 
-Each worker runs as an independent process with its own port, decrementing from 8760. Press `Ctrl+C` to gracefully shut down all workers.
+---
 
-**Use cases:**
-- **Load distribution** — spread incoming MCP client connections across multiple instances behind a reverse proxy (nginx, HAProxy)
-- **Workload isolation** — dedicated workers for different agent teams or environments (staging vs. production)
-- **Graceful rolling restarts** — restart workers one at a time without dropping connections
+## Scripts
+
+| Command | Description |
+|---------|-------------|
+| `pnpm dev:v1` | v1 dev server (hot reload + inspector + widgets) |
+| `pnpm build:v1` | v1 production build |
+| `pnpm start:v1` | v1 production HTTP server (port 8760) |
+| `pnpm start:v1:multi -- --workers N` | v1 multi-worker launcher |
+
+v2 scripts are defined in [ADR 001](./docs/adr/001-monorepo-and-protocol-version-strategy.md) but not yet implemented.
+
+---
 
 ## Client Configuration
 
-### HTTP mode
+### HTTP Mode
 
 ```json
 {
@@ -147,38 +74,31 @@ Each worker runs as an independent process with its own port, decrementing from 
 }
 ```
 
-### stdio mode
+### stdio Mode
 
-Widget resources (`ui://widget/*`) are HTTP-only (require a browser to render). All other capabilities — tools, static resources, prompts, elicitation, sampling, roots, progress, logging — are fully available over stdio.
+Widgets (`ui://widget/*`) are HTTP-only. All other capabilities — tools, static resources, prompts, elicitation, sampling, roots, progress, logging — are available over stdio.
 
 ```json
 {
   "servers": {
     "enterprise-ops-hub": {
       "command": "npx",
-      "args": ["tsx", "src/stdio.ts"],
+      "args": ["tsx", "packages/v1/src/stdio.ts"],
       "cwd": "/path/to/mock_mcp"
     }
   }
 }
 ```
 
-Or with the built output:
+---
 
-```json
-{
-  "command": "node",
-  "args": ["dist/src/stdio.js"],
-  "cwd": "/path/to/mock_mcp"
-}
-```
+## Version Strategy
 
-## Scripts
+This project is a mock server for protocol version testing. Two packages serve different MCP protocol eras:
 
-| Command | Description |
-|---------|-------------|
-| `npm run dev` | Development server with hot reload, inspector, and widgets |
-| `npm run build` | Production build (TypeScript compilation + widget bundling) |
-| `npm run start` | Production HTTP server (single instance, port 8760) |
-| `npm run start:multi -- --workers N` | Launch N production workers (ports 8760, 8759, ...) |
-| `npx tsx src/stdio.ts` | stdio mode for local agent integration |
+- **`@mock-mcp/v1`** *(implemented)* — mcp-use v1 (pinned to `1.32.1`), implements the legacy MCP protocol. Uses `McpUseProvider`/`useWidget` widget runtime.
+- **`@mock-mcp/v2`** *(planned)* — will use mcp-use v2, implementing the 2026-07-28 protocol revision. Targeting dual-era support (`legacy: "stateless"`) and modern-only mode (`legacy: "reject"`). Uses `bootstrapView`/`useToolContext` widget runtime. Deferred until `mcp-use@2` stabilizes (currently in canary).
+
+Both packages share mock data via `@mock-mcp/shared`.
+
+For full capability details, see [`docs/tools-reference.md`](./docs/tools-reference.md). For architecture decisions, see [`docs/adr/`](./docs/adr/).
