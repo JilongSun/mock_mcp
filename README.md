@@ -1,6 +1,6 @@
 # Mock MCP Server
 
-A mock [Model Context Protocol](https://modelcontextprotocol.io) server for testing MCP bridges, clients, and protocol version negotiation. Provides a realistic enterprise operations dataset with tools, resources, prompts, and interactive widgets — no real APIs or databases required.
+A mock [Model Context Protocol](https://modelcontextprotocol.io) server for testing independent hosts that implement the MCP Apps SEP-1865 protocol. It provides a realistic enterprise operations dataset with tools, resources, prompts, and interactive widgets — no real APIs or databases required.
 
 Detailed tool reference, capability descriptions, and client configuration guides are in [`docs/`](./docs/).
 
@@ -12,8 +12,7 @@ Detailed tool reference, capability descriptions, and client configuration guide
 mock_mcp/
 ├── packages/
 │   ├── shared/        # @mock-mcp/shared — mock data & utilities
-│   ├── v1/            # @mock-mcp/v1    — mcp-use@1.32.1 (implemented)
-│   └── v2/            # @mock-mcp/v2    — mcp-use@2.x   (planned)
+│   └── v1/            # @mock-mcp/v1    — mcp-use@1.32.1 server
 ├── public/            # Static assets
 ├── docs/              # Tool reference, capability docs & ADRs
 └── README.md
@@ -25,12 +24,10 @@ mock_mcp/
 
 ```bash
 pnpm install
-pnpm dev:v1       # Run the v1 server (legacy MCP protocol)
+pnpm dev:v1       # Run the SEP-1865 MCP Apps server
 ```
 
 Open [http://localhost:8760/inspector](http://localhost:8760/inspector) to explore tools, resources, and widgets interactively.
-
-> **v2 is currently in planning.** The `mcp-use@2` API surface is still evolving (canary releases). See [ADR 001](./docs/adr/001-monorepo-and-protocol-version-strategy.md) for the migration strategy and rationale. v1 remains the stable, tested version.
 
 ---
 
@@ -54,8 +51,6 @@ pnpm start:v1:multi -- -w 5
 | `pnpm build:v1` | v1 production build |
 | `pnpm start:v1` | v1 production HTTP server (port 8760) |
 | `pnpm start:v1:multi -- --workers N` | v1 multi-worker launcher |
-
-v2 scripts are defined in [ADR 001](./docs/adr/001-monorepo-and-protocol-version-strategy.md) but not yet implemented.
 
 ---
 
@@ -92,13 +87,15 @@ Widgets (`ui://widget/*`) are HTTP-only. All other capabilities — tools, stati
 
 ---
 
-## Version Strategy
+## Runtime and Build Strategy
 
-This project is a mock server for protocol version testing. Two packages serve different MCP protocol eras:
+The `v1` package name identifies the pinned `mcp-use@1.32.1` runtime; it does not identify a legacy MCP Apps protocol. The server exposes SEP-1865 `ui.resourceUri` metadata, and widgets use the MCP Apps bridge rather than the OpenAI compatibility provider.
 
-- **`@mock-mcp/v1`** *(implemented)* — mcp-use v1 (pinned to `1.32.1`), implements the legacy MCP protocol. Uses `McpUseProvider`/`useWidget` widget runtime.
-- **`@mock-mcp/v2`** *(planned)* — will use mcp-use v2, implementing the 2026-07-28 protocol revision. Targeting dual-era support (`legacy: "stateless"`) and modern-only mode (`legacy: "reject"`). Uses `bootstrapView`/`useToolContext` widget runtime. Deferred until `mcp-use@2` stabilizes (currently in canary).
+Each workspace package owns its compiled output:
 
-Both packages share mock data via `@mock-mcp/shared`.
+- `@mock-mcp/shared` builds to `packages/shared/dist` and exports JavaScript and declarations from that directory.
+- `@mock-mcp/v1` builds the server and widgets to `packages/v1/dist`.
+
+Keeping these outputs package-local preserves Node package export resolution. The root package orchestrates builds but does not flatten independently versioned workspace packages into a shared root `dist`.
 
 For full capability details, see [`docs/server-capabilities.md`](./docs/server-capabilities.md). For architecture decisions, see [`docs/adr/`](./docs/adr/).

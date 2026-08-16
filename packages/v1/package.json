@@ -7,9 +7,13 @@
   "license": "MIT",
   "main": "index.ts",
   "scripts": {
+    "prebuild": "pnpm --filter @mock-mcp/shared build",
     "build": "mcp-use build",
+    "predev": "pnpm --filter @mock-mcp/shared build",
     "dev": "mcp-use dev --port 8760",
+    "prestart": "pnpm --filter @mock-mcp/shared build",
     "start": "mcp-use start --port 8760",
+    "prestart:multi": "pnpm --filter @mock-mcp/shared build",
     "start:multi": "tsx cli.ts",
     "postinstall": "mcp-use generate-types || exit 0"
   },

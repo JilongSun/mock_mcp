@@ -537,3 +537,59 @@ server.prompt(
     return text(`Template for generating ${count} ${dataType} records:\n\n${tmpl[dataType]}\n\nUse realistic data. IDs follow the specified format.`);
   }
 );
+
+function normalizeMcpAppsMetadata(
+  metadata: Record<string, unknown>,
+  widgetName: string
+): Record<string, unknown> {
+  const resourceUri =
+    typeof metadata["openai/outputTemplate"] === "string"
+      ? metadata["openai/outputTemplate"]
+      : `ui://widget/${widgetName}.html`;
+  const ui =
+    typeof metadata.ui === "object" && metadata.ui !== null
+      ? metadata.ui
+      : {};
+
+  return {
+    ...Object.fromEntries(
+      Object.entries(metadata).filter(([key]) => !key.startsWith("openai/"))
+    ),
+    ui: { ...ui, resourceUri },
+    "ui/resourceUri": resourceUri,
+  };
+}
+
+export function normalizeMcpAppsToolMetadata(): void {
+  for (const registration of server.registrations.tools.values()) {
+    const widgetName = registration.config.widget?.name;
+    if (!widgetName) continue;
+
+    registration.config._meta = normalizeMcpAppsMetadata(
+      registration.config._meta ?? {},
+      widgetName
+    );
+  }
+}
+
+const registerUiResource = server.uiResource;
+server.uiResource = (definition) => {
+  const result = registerUiResource(definition);
+  normalizeMcpAppsToolMetadata();
+  return result;
+};
+
+const updateWidgetToolInPlace = server.updateWidgetToolInPlace.bind(server);
+server.updateWidgetToolInPlace = (toolName, updates) => {
+  const widgetName = server.registrations.tools.get(toolName)?.config.widget?.name;
+  if (!widgetName || !updates._meta) {
+    return updateWidgetToolInPlace(toolName, updates);
+  }
+
+  return updateWidgetToolInPlace(toolName, {
+    ...updates,
+    _meta: normalizeMcpAppsMetadata(updates._meta, widgetName),
+  });
+};
+
+normalizeMcpAppsToolMetadata();

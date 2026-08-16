@@ -5,7 +5,7 @@
   "scripts": {
     "dev:v1": "pnpm --filter @mock-mcp/v1 dev",
     "build:shared": "pnpm --filter @mock-mcp/shared build",
-    "build:v1": "pnpm build:shared && pnpm --filter @mock-mcp/v1 build",
+    "build:v1": "pnpm --filter @mock-mcp/v1 build",
     "start:v1": "pnpm --filter @mock-mcp/v1 start",
     "start:v1:multi": "pnpm --filter @mock-mcp/v1 start:multi"
   },

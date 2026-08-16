@@ -1,6 +1,7 @@
 import { McpUseProvider, useWidget, type WidgetMetadata } from "mcp-use/react";
 import { useState } from "react";
 import { z } from "zod";
+import "../lib/mcp-apps-only";
 import "../styles.css";
 
 const orderItemSchema = z.object({

@@ -8,6 +8,7 @@ import {
 } from "mcp-use/react";
 import React, { useCallback } from "react";
 import { Link } from "react-router";
+import "../lib/mcp-apps-only";
 import "../styles.css";
 import { Carousel } from "./components/Carousel";
 import { CarouselSkeleton } from "./components/CarouselSkeleton";

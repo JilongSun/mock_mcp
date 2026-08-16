@@ -1,6 +1,7 @@
 import { McpUseProvider, useWidget, useWidgetTheme, type WidgetMetadata } from "mcp-use/react";
 import { useState } from "react";
 import { z } from "zod";
+import "../lib/mcp-apps-only";
 import "../styles.css";
 
 const locationSchema = z.object({
