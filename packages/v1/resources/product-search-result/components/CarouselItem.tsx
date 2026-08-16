@@ -30,7 +30,7 @@ export const CarouselItem: React.FC<CarouselItemProps> = ({
           size="md"
           uniform
           variant="ghost"
-          onClick={(e) => {
+          onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
             e.stopPropagation();
             onToggleFavorite();
           }}

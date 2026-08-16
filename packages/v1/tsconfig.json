@@ -15,9 +15,8 @@
     "types": ["node"],
     "incremental": true,
     "tsBuildInfoFile": "./dist/.tsbuildinfo",
-    "baseUrl": ".",
     "paths": {
-      "@/*": ["src/*"]
+      "@/*": ["./src/*"]
     }
   },
   "include": ["index.ts", "cli.ts", "src/**/*", "resources/**/*", ".mcp-use/**/*.d.ts"],
