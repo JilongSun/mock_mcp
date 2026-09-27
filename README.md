@@ -1,5 +1,7 @@
 # Mock MCP Server
 
+English | [简体中文](./README_zh.md)
+
 A mock [Model Context Protocol](https://modelcontextprotocol.io) server for testing independent hosts that implement the MCP Apps SEP-1865 protocol. It provides a realistic enterprise operations dataset with tools, resources, prompts, and interactive widgets — no real APIs or databases required.
 
 Detailed tool reference, capability descriptions, and client configuration guides are in [`docs/`](./docs/).
