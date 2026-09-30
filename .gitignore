@@ -7,6 +7,9 @@ dist/
 .mcp-use/
 .vite/
 
+# Local runtime state (background process records & logs)
+.run/
+
 # TypeScript
 *.tsbuildinfo
 

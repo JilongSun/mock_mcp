@@ -33,15 +33,50 @@ Open [http://localhost:8760/inspector](http://localhost:8760/inspector) to explo
 
 ---
 
-## Multi-Worker Deployment
+## Run Modes
+
+`v1` can run **in the foreground** (attached to your terminal) or **in the background**
+(detached — it keeps running after you close the terminal).
 
 ```bash
-# v1 — 3 workers on ports 8760, 8759, 8758
-pnpm start:v1:multi -- --workers 3
+# Foreground — logs stream to the terminal, Ctrl+C stops everything
+pnpm run:v1
+
+# Background — records its ports/PIDs locally and logs to packages/v1/.run/logs/
+pnpm start:v1
+
+# Inspect & stop background jobs
+pnpm status:v1
+pnpm stop:v1                    # stops EVERY recorded job
+pnpm stop:v1 -- --port 8760     # stops only the job on that port
+```
+
+Background records live in `packages/v1/.run/` (git-ignored): `processes.json` holds
+the port/PID records, `logs/` holds one log file per job.
+
+### Multi-Worker
+
+Add `--workers N`. Workers listen on sequential ports counting down from the base
+port (8760, 8759, 8758, …). A background multi-worker run is recorded as **one job**,
+so a single `pnpm stop:v1` shuts every worker down.
+
+```bash
+# Foreground — 3 workers on ports 8760, 8759, 8758
+pnpm run:v1 -- --workers 3
+
+# Background — 3 workers, starting from port 8760
+pnpm start:v1 -- --workers 3 --port 8760
 
 # Shorthand
-pnpm start:v1:multi -- -w 5
+pnpm start:v1 -- -w 5
 ```
+
+| Option | Description |
+|--------|-------------|
+| `-p, --port <n>` | Base port (default `8760`) |
+| `-w, --workers <n>` | Number of workers (default `1`) |
+| `-a, --all` | (`stop`) stop every recorded job — already the default |
+| `-h, --help` | Show usage |
 
 ---
 
@@ -51,8 +86,12 @@ pnpm start:v1:multi -- -w 5
 |---------|-------------|
 | `pnpm dev:v1` | v1 dev server (hot reload + inspector + widgets) |
 | `pnpm build:v1` | v1 production build |
-| `pnpm start:v1` | v1 production HTTP server (port 8760) |
-| `pnpm start:v1:multi -- --workers N` | v1 multi-worker launcher |
+| `pnpm run:v1` | v1 server in the **foreground** (port 8760) |
+| `pnpm start:v1` | v1 server in the **background** (survives closing the terminal) |
+| `pnpm status:v1` | List recorded background job(s) |
+| `pnpm stop:v1` | Stop background job(s) — all of them by default |
+
+Add `-- --workers N` to `run:v1` / `start:v1` for multi-worker mode.
 
 ---
 

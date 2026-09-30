@@ -11,10 +11,12 @@
     "build": "mcp-use build",
     "predev": "pnpm --filter @mock-mcp/shared build",
     "dev": "mcp-use dev --port 8760",
+    "prerun": "pnpm --filter @mock-mcp/shared build",
+    "run": "tsx cli.ts run",
     "prestart": "pnpm --filter @mock-mcp/shared build",
-    "start": "mcp-use start --port 8760",
-    "prestart:multi": "pnpm --filter @mock-mcp/shared build",
-    "start:multi": "tsx cli.ts",
+    "start": "tsx cli.ts start",
+    "stop": "tsx cli.ts stop",
+    "status": "tsx cli.ts status",
     "postinstall": "mcp-use generate-types || exit 0"
   },
   "dependencies": {

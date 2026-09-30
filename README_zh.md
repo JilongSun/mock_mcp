@@ -33,15 +33,48 @@ pnpm dev:v1       # 运行 SEP-1865 MCP Apps 服务器
 
 ---
 
-## 多 Worker 部署
+## 运行模式
+
+`v1` 支持**前台运行**（附着在终端上）和**后台运行**（脱离终端，关闭终端后仍然继续运行）。
 
 ```bash
-# v1 — 3 个 worker，分别监听端口 8760、8759、8758
-pnpm start:v1:multi -- --workers 3
+# 前台 —— 日志直接输出到终端，Ctrl+C 停止
+pnpm run:v1
+
+# 后台 —— 在本地记录端口/PID，日志写入 packages/v1/.run/logs/
+pnpm start:v1
+
+# 查看与停止后台进程
+pnpm status:v1
+pnpm stop:v1                    # 停止全部已记录的后台 job
+pnpm stop:v1 -- --port 8760     # 只停止该端口上的 job
+```
+
+后台记录保存在 `packages/v1/.run/`（已在 `.gitignore` 中）：`processes.json` 存放端口/PID
+记录，`logs/` 每个 job 一个日志文件。
+
+### 多 Worker
+
+加上 `--workers N`。worker 从基础端口开始递减占用连续端口（8760、8759、8758……）。
+后台多 worker 会记录为**同一个 job**，因此一条 `pnpm stop:v1` 即可全部关闭。
+
+```bash
+# 前台 —— 3 个 worker，端口 8760、8759、8758
+pnpm run:v1 -- --workers 3
+
+# 后台 —— 3 个 worker，从端口 8760 开始
+pnpm start:v1 -- --workers 3 --port 8760
 
 # 简写形式
-pnpm start:v1:multi -- -w 5
+pnpm start:v1 -- -w 5
 ```
+
+| 选项 | 说明 |
+|--------|-------------|
+| `-p, --port <n>` | 基础端口（默认 `8760`） |
+| `-w, --workers <n>` | worker 数量（默认 `1`） |
+| `-a, --all` | （`stop`）停止全部已记录 job —— 本来就是默认行为 |
+| `-h, --help` | 显示用法 |
 
 ---
 
@@ -51,8 +84,12 @@ pnpm start:v1:multi -- -w 5
 |---------|-------------|
 | `pnpm dev:v1` | v1 开发服务器（热重载 + inspector + widgets） |
 | `pnpm build:v1` | v1 生产构建 |
-| `pnpm start:v1` | v1 生产 HTTP 服务器（端口 8760） |
-| `pnpm start:v1:multi -- --workers N` | v1 多 worker 启动器 |
+| `pnpm run:v1` | v1 **前台**运行（端口 8760） |
+| `pnpm start:v1` | v1 **后台**运行（关闭终端后仍继续） |
+| `pnpm status:v1` | 列出已记录的后台 job |
+| `pnpm stop:v1` | 停止后台 job —— 默认全部关闭 |
+
+`run:v1` / `start:v1` 加上 `-- --workers N` 即为多 worker 模式。
 
 ---
 

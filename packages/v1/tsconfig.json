@@ -19,6 +19,13 @@
       "@/*": ["./src/*"]
     }
   },
-  "include": ["index.ts", "cli.ts", "src/**/*", "resources/**/*", ".mcp-use/**/*.d.ts"],
+  "include": [
+    "index.ts",
+    "cli.ts",
+    "scripts/**/*",
+    "src/**/*",
+    "resources/**/*",
+    ".mcp-use/**/*.d.ts"
+  ],
   "exclude": ["node_modules", "dist"]
 }
