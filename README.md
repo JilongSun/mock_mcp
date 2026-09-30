@@ -54,17 +54,16 @@ pnpm stop:v1 -- --port 8760     # stops only the job on that port
 Background records live in `packages/v1/.run/` (git-ignored): `processes.json` holds
 the port/PID records, `logs/` holds one log file per job.
 
-### Multi-Worker
+### Multi-Worker (background only)
 
-Add `--workers N`. Workers listen on sequential ports counting down from the base
-port (8760, 8759, 8758, …). A background multi-worker run is recorded as **one job**,
-so a single `pnpm stop:v1` shuts every worker down.
+Multi-worker mode is exclusive to `start`. `run` is always a single foreground instance.
+
+Add `--workers N`. Workers listen on sequential ports counting down from the base port
+(8760, 8759, 8758, …) and are recorded as **one job**, so a single `pnpm stop:v1` shuts
+every worker down.
 
 ```bash
-# Foreground — 3 workers on ports 8760, 8759, 8758
-pnpm run:v1 -- --workers 3
-
-# Background — 3 workers, starting from port 8760
+# Background — 3 workers on ports 8760, 8759, 8758
 pnpm start:v1 -- --workers 3 --port 8760
 
 # Shorthand
@@ -74,7 +73,7 @@ pnpm start:v1 -- -w 5
 | Option | Description |
 |--------|-------------|
 | `-p, --port <n>` | Base port (default `8760`) |
-| `-w, --workers <n>` | Number of workers (default `1`) |
+| `-w, --workers <n>` | (`start` only) number of background workers (default `1`) |
 | `-a, --all` | (`stop`) stop every recorded job — already the default |
 | `-h, --help` | Show usage |
 
@@ -91,7 +90,7 @@ pnpm start:v1 -- -w 5
 | `pnpm status:v1` | List recorded background job(s) |
 | `pnpm stop:v1` | Stop background job(s) — all of them by default |
 
-Add `-- --workers N` to `run:v1` / `start:v1` for multi-worker mode.
+Add `-- --workers N` to `start:v1` for multi-worker background mode.
 
 ---
 
