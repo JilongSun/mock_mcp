@@ -54,6 +54,15 @@ pnpm stop:v1 -- --port 8760     # stops only the job on that port
 Background records live in `packages/v1/.run/` (git-ignored): `processes.json` holds
 the port/PID records, `logs/` holds one log file per job.
 
+`start` waits for the server to **actually bind its port** before reporting success —
+cold boot takes ~10–20s and `mcp-use` prints nothing in the meantime, so an
+immediate success message would be misleading. If a worker dies or never binds, the
+job is rolled back (stopped + removed from the record) and `start` exits non-zero.
+Tune the budget with `--timeout <seconds>` (default `45`).
+
+`pnpm status:v1` probes the port too, so it distinguishes `running` from
+`alive but NOT listening (booting or hung)`.
+
 ### Multi-Worker (background only)
 
 Multi-worker mode is exclusive to `start`. `run` is always a single foreground instance.
@@ -74,6 +83,7 @@ pnpm start:v1 -- -w 5
 |--------|-------------|
 | `-p, --port <n>` | Base port (default `8760`) |
 | `-w, --workers <n>` | (`start` only) number of background workers (default `1`) |
+| `-t, --timeout <s>` | (`start` only) seconds to wait for readiness (default `45`) |
 | `-a, --all` | (`stop`) stop every recorded job — already the default |
 | `-h, --help` | Show usage |
 

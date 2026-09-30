@@ -53,6 +53,14 @@ pnpm stop:v1 -- --port 8760     # 只停止该端口上的 job
 后台记录保存在 `packages/v1/.run/`（已在 `.gitignore` 中）：`processes.json` 存放端口/PID
 记录，`logs/` 每个 job 一个日志文件。
 
+`start` 会等待服务**真正绑定端口**后才报告成功 —— 冷启动需要 ~10–20 秒，期间
+`mcp-use` 不输出任何日志，若立刻报成功会非常误导。如果 worker 退出或始终没有绑定端口，
+该 job 会被回滚（停掉并从记录中移除），`start` 以非零码退出。可用 `--timeout <秒>`
+调整等待上限（默认 `45`）。
+
+`pnpm status:v1` 也会探测端口，因此能区分 `running` 与
+`alive but NOT listening (booting or hung)`。
+
 ### 多 Worker（仅后台）
 
 多 worker 仅 `start` 支持，`run` 始终是单实例前台。
@@ -72,6 +80,7 @@ pnpm start:v1 -- -w 5
 |--------|-------------|
 | `-p, --port <n>` | 基础端口（默认 `8760`） |
 | `-w, --workers <n>` | （仅 `start`）后台 worker 数量（默认 `1`） |
+| `-t, --timeout <s>` | （仅 `start`）等待就绪的秒数（默认 `45`） |
 | `-a, --all` | （`stop`）停止全部已记录 job —— 本来就是默认行为 |
 | `-h, --help` | 显示用法 |
 

@@ -16,6 +16,7 @@
 
 import { spawn, type ChildProcess } from "node:child_process";
 import fs from "node:fs";
+import net from "node:net";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -121,6 +122,59 @@ async function waitForExit(pids: number[], timeoutMs: number): Promise<number[]>
     remaining = remaining.filter(isAlive);
   }
   return remaining;
+}
+
+// ─── Readiness probing ──────────────────────────────────────────────────
+/**
+ * Cold boot is slow: `mcp-use start` prints nothing for ~10–20s and only binds
+ * the port at the very end (its child `node dist/index.js` does the listening).
+ * So "spawned" is not "ready" — callers must probe the port instead of trusting
+ * the spawn.
+ */
+function probePort(port: number, timeoutMs = 500): Promise<boolean> {
+  return new Promise((resolve) => {
+    const socket = net.connect({ host: "127.0.0.1", port });
+    const finish = (ok: boolean): void => {
+      socket.removeAllListeners();
+      socket.destroy();
+      resolve(ok);
+    };
+    socket.setTimeout(timeoutMs, () => finish(false));
+    socket.once("connect", () => finish(true));
+    socket.once("error", () => finish(false));
+  });
+}
+
+/** True when something currently accepts connections on 127.0.0.1:port. */
+export function isPortOpen(port: number): Promise<boolean> {
+  return probePort(port);
+}
+
+export interface ReadyResult {
+  ready: boolean;
+  elapsedMs: number;
+  /** `exited` — the worker died while booting; `timeout` — still not listening. */
+  reason?: "exited" | "timeout";
+}
+
+/** Poll until the worker listens on its port, dies, or the budget runs out. */
+export async function waitForPort(
+  port: number,
+  opts: { pid: number; timeoutMs: number },
+): Promise<ReadyResult> {
+  const startedAt = Date.now();
+  for (;;) {
+    if (await probePort(port)) {
+      return { ready: true, elapsedMs: Date.now() - startedAt };
+    }
+    if (!isAlive(opts.pid)) {
+      return { ready: false, elapsedMs: Date.now() - startedAt, reason: "exited" };
+    }
+    if (Date.now() - startedAt >= opts.timeoutMs) {
+      return { ready: false, elapsedMs: Date.now() - startedAt, reason: "timeout" };
+    }
+    await sleep(POLL_INTERVAL_MS);
+  }
 }
 
 // ─── Resolving the mcp-use binary ───────────────────────────────────────

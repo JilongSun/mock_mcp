@@ -36,6 +36,7 @@ import {
   DEFAULT_PORT,
   formatAge,
   isAlive,
+  isPortOpen,
   jobIdFor,
   logFileFor,
   removeJobs,
@@ -44,12 +45,16 @@ import {
   spawnDetachedWorker,
   spawnForegroundWorker,
   stopJob,
+  waitForPort,
   workerPorts,
   type JobRecord,
 } from "./scripts/process-manager.js";
 
 // ─── Argument parsing ───────────────────────────────────────────────────
 type Command = "run" | "start" | "stop" | "status";
+
+/** How long `start` waits for the workers to actually bind their ports. */
+const DEFAULT_START_TIMEOUT_MS = 45_000;
 
 interface Options {
   command: Command;
@@ -58,6 +63,8 @@ interface Options {
   portExplicit: boolean;
   /** Number of background workers; always 1 for `run`. */
   workers: number;
+  /** Readiness budget for `start`. */
+  timeoutMs: number;
   all: boolean;
 }
 
@@ -76,8 +83,12 @@ Commands:
 Options:
   -p, --port <n>      Base port (default: ${DEFAULT_PORT})
   -w, --workers <n>   (start only) number of background workers (default: 1)
+  -t, --timeout <s>   (start only) seconds to wait for readiness (default: 45)
   -a, --all           (stop) stop every recorded job — this is the default
   -h, --help          Show this help
+
+Cold boot takes ~10-20s: "start" only reports success once every worker is
+actually listening, and rolls back the job if a worker dies or never binds.
 `.trim();
 
 function fail(message: string): never {
@@ -111,6 +122,8 @@ function parseArgs(argv: string[]): Options {
   let portExplicit = false;
   let workers = 1;
   let workersExplicit = false;
+  let timeoutMs = DEFAULT_START_TIMEOUT_MS;
+  let timeoutExplicit = false;
   let all = false;
 
   for (let i = 0; i < rest.length; i++) {
@@ -132,6 +145,14 @@ function parseArgs(argv: string[]): Options {
         workersExplicit = true;
         break;
       }
+      case "-t":
+      case "--timeout": {
+        const next = rest[++i];
+        if (next === undefined) fail(`${arg} requires a value`);
+        timeoutMs = parsePositiveInt(next, arg) * 1000;
+        timeoutExplicit = true;
+        break;
+      }
       case "-a":
       case "--all":
         all = true;
@@ -150,6 +171,9 @@ function parseArgs(argv: string[]): Options {
   if (workersExplicit && command !== "start") {
     fail(`--workers only applies to "start" (background mode)`);
   }
+  if (timeoutExplicit && command !== "start") {
+    fail(`--timeout only applies to "start" (background mode)`);
+  }
   if (command === "stop" && all && portExplicit) {
     fail(`"stop" accepts either --all or --port, not both`);
   }
@@ -157,7 +181,7 @@ function parseArgs(argv: string[]): Options {
     fail(`--all only applies to "stop"`);
   }
 
-  return { command, port, portExplicit, workers, all };
+  return { command, port, portExplicit, workers, timeoutMs, all };
 }
 
 // ─── Foreground (`run`) ─────────────────────────────────────────────────
@@ -207,7 +231,11 @@ async function runForeground(basePort: number): Promise<void> {
 }
 
 // ─── Background (`start`) ───────────────────────────────────────────────
-function startBackground(basePort: number, workers: number): void {
+async function startBackground(
+  basePort: number,
+  workers: number,
+  timeoutMs: number,
+): Promise<void> {
   const active = selectJobs(basePort).filter((job) =>
     job.workers.some((worker) => isAlive(worker.pid)),
   );
@@ -238,15 +266,52 @@ function startBackground(basePort: number, workers: number): void {
   for (const port of ports) {
     const worker = spawnDetachedWorker(port, logFile);
     record.workers.push(worker);
-    console.log(`  Worker → port ${port} (PID: ${worker.pid})`);
+    console.log(`  Spawned → port ${port} (PID ${worker.pid})`);
   }
 
+  // Persist before waiting, so a Ctrl+C during boot still leaves `stop` something to clean up.
   saveJob(record);
 
+  // The port is only bound at the very end of the cold boot, so wait for real readiness.
+  console.log(`\n⏳ Waiting for the server to bind (cold boot takes ~10–20s)...\n`);
+  const results = await Promise.all(
+    record.workers.map(async (worker) => ({
+      worker,
+      result: await waitForPort(worker.port, { pid: worker.pid, timeoutMs }),
+    })),
+  );
+
+  const failed = results.filter((entry) => !entry.result.ready);
+  for (const { worker, result } of results) {
+    const seconds = (result.elapsedMs / 1000).toFixed(1);
+    console.log(
+      result.ready
+        ? `  ✅ port ${worker.port} listening after ${seconds}s (PID ${worker.pid})`
+        : `  ❌ port ${worker.port} NOT listening — ${
+            result.reason === "exited" ? "worker exited" : `timed out after ${seconds}s`
+          } (PID ${worker.pid})`,
+    );
+  }
+
+  if (failed.length > 0) {
+    console.error(`\n[error] ${failed.length}/${workers} worker(s) failed to start.`);
+    console.error(`        Rolling back the job and cleaning up...`);
+    console.error(`        Check the log for the reason: ${logFile}\n`);
+
+    await stopJob(record);
+    removeJobs([record.id]);
+    process.exit(1);
+  }
+
   console.log(`\n✅ Running in the background — closing this terminal will not stop it.`);
-  console.log(`   Job:  ${id}`);
-  console.log(`   Logs: ${logFile}`);
-  console.log(`   Stop: pnpm stop:v1\n`);
+  console.log(`   Job:    ${id}`);
+  console.log(
+    `   Ports:  ${record.workers.map((worker) => worker.port).join(", ")}`,
+  );
+  console.log(`   MCP:    http://localhost:${basePort}/mcp`);
+  console.log(`   Logs:   ${logFile}`);
+  console.log(`   Status: pnpm status:v1`);
+  console.log(`   Stop:   pnpm stop:v1\n`);
 }
 
 // ─── Stop ───────────────────────────────────────────────────────────────
@@ -281,7 +346,7 @@ async function stop(filterPort: number | undefined): Promise<void> {
 }
 
 // ─── Status ─────────────────────────────────────────────────────────────
-function status(filterPort: number | undefined): void {
+async function status(filterPort: number | undefined): Promise<void> {
   const jobs = selectJobs(filterPort);
 
   if (jobs.length === 0) {
@@ -293,10 +358,16 @@ function status(filterPort: number | undefined): void {
   for (const job of jobs) {
     console.log(`● ${job.id}  (${job.mode}, started ${formatAge(job.createdAt)})`);
     for (const worker of job.workers) {
+      // A PID alone is not enough: the process can be alive but still booting,
+      // or hung, so probe the port to report the state that actually matters.
       const alive = isAlive(worker.pid);
-      console.log(
-        `    port ${worker.port}  PID ${worker.pid}  ${alive ? "running" : "DEAD (stale record)"}`,
-      );
+      const listening = alive && (await isPortOpen(worker.port));
+      const state = !alive
+        ? "DEAD (stale record)"
+        : listening
+          ? "running"
+          : "alive but NOT listening (booting or hung)";
+      console.log(`    port ${worker.port}  PID ${worker.pid}  ${state}`);
     }
     console.log(`    logs: ${job.logFile}`);
   }
@@ -312,12 +383,12 @@ switch (options.command) {
     await runForeground(options.port);
     break;
   case "start":
-    startBackground(options.port, options.workers);
+    await startBackground(options.port, options.workers, options.timeoutMs);
     break;
   case "stop":
     await stop(scope);
     break;
   case "status":
-    status(scope);
+    await status(scope);
     break;
 }
