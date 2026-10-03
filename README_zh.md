@@ -31,6 +31,15 @@ pnpm dev:v1       # 运行 SEP-1865 MCP Apps 服务器
 
 打开 [http://localhost:8760/inspector](http://localhost:8760/inspector) 即可交互式地浏览工具、资源和小组件。
 
+`manage-orders` 会渲染**订单管理器（Order Manager）**——一个可交互的小组件，其按钮会回调服务器上的
+`update-order-status` 工具。这是验证宿主是否完整接通 MCP Apps 桥接的最快方式：在 inspector 中执行
+`manage-orders`，把响应面板切到 **Component (MCP Apps)**，然后点击状态按钮，服务器日志中就会出现
+`tools/call: update-order-status`。详见 [`docs/server-capabilities.md`](./docs/server-capabilities.md#testing-widgets-in-the-inspector)。
+
+> inspector 仅在 `pnpm dev:v1` 下提供。生产运行（`pnpm run:v1` / `pnpm start:v1`）会跳过它——如需在
+> 非开发模式下使用，请用 `mcp-use build --with-inspector` 构建。小组件在两种模式下都会通过
+> `/mcp-use/widgets/<name>` 提供。
+
 ---
 
 ## 运行模式
