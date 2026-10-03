@@ -59,12 +59,14 @@ const orderItemSchema = z.object({
   price: z.number(),
 });
 
+const orderStatusSchema = z.enum(["pending", "processing", "shipped", "delivered", "cancelled"]);
+
 const orderRowSchema = z.object({
   id: z.string(),
   customer: z.string(),
   items: z.array(orderItemSchema),
   total: z.number(),
-  status: z.enum(["pending", "processing", "shipped", "delivered", "cancelled"]),
+  status: orderStatusSchema,
   placedAt: z.string(),
   shippedAt: z.string().nullable(),
 });
@@ -457,6 +459,72 @@ server.tool(
   }
 );
 
+// ─── 16. manage-orders (interactive widget) ──────────────────────────
+server.tool(
+  {
+    name: "manage-orders",
+    description:
+      "Open an interactive order management widget where order statuses can be changed with a single click. Every button in the widget calls the update-order-status tool, which makes this tool an end-to-end test of widget → server interactivity.",
+    schema: z.object({
+      status: orderStatusSchema.optional().describe("Only show orders currently in this status"),
+      limit: z.number().min(1).max(20).optional().default(5).describe("Maximum number of orders to show"),
+    }),
+    annotations: { readOnlyHint: false, destructiveHint: true, openWorldHint: false },
+    outputSchema: z.object({ orders: z.array(orderRowSchema), total: z.number() }),
+    widget: { name: "order-actions", invoking: "Opening order manager...", invoked: "Order manager ready" },
+  },
+  async ({ status, limit }) => {
+    await mockDelay(300, 800);
+    const filtered = status ? mockOrders.filter((o) => o.status === status) : mockOrders;
+    const orders = filtered.slice(0, limit).map((o) => ({ ...o }));
+    return widget({
+      props: { orders, total: orders.length },
+      output: text(
+        `Order manager opened with ${orders.length} order(s)${status ? ` in status "${status}"` : ""}. Status changes are made from inside the widget.`
+      ),
+    });
+  }
+);
+
+// ─── 17. update-order-status (called from the order-actions widget) ──
+server.tool(
+  {
+    name: "update-order-status",
+    description:
+      "Update the status of a mock order. Primarily invoked by the order-actions widget, but also usable directly by a model. Changes are in-memory and reset when the server restarts.",
+    schema: z.object({
+      orderId: z.string().describe("Order id to update (e.g., 'ord-1001'). Use list-orders to discover ids."),
+      status: orderStatusSchema.describe("New status for the order"),
+    }),
+    annotations: { readOnlyHint: false, destructiveHint: true, openWorldHint: false },
+    outputSchema: z.object({ order: orderRowSchema, previousStatus: orderStatusSchema, note: z.string() }),
+  },
+  async ({ orderId, status }) => {
+    await mockDelay(200, 600);
+    const order = mockOrders.find((o) => o.id === orderId);
+    if (!order) {
+      return error(`Order not found: ${orderId}. Use list-orders to see valid order ids.`);
+    }
+
+    const previousStatus = order.status;
+    order.status = status;
+    if (status === "shipped" || status === "delivered") {
+      order.shippedAt ??= new Date().toISOString().slice(0, 10);
+    } else {
+      order.shippedAt = null;
+    }
+
+    return object({
+      order: { ...order },
+      previousStatus,
+      note:
+        previousStatus === status
+          ? `Order ${orderId} was already "${status}".`
+          : `Order ${orderId}: ${previousStatus} → ${status}. In-memory change — reverts on restart.`,
+    });
+  }
+);
+
 // ═══════════════════════════════════════════════════════════════════════
 // RESOURCES
 // ═══════════════════════════════════════════════════════════════════════
@@ -487,6 +555,8 @@ server.resource(
 | \`generate-report\` | Generate mock analytics report | ❌ |
 | \`search-knowledge\` | Search knowledge base | ❌ |
 | \`get-server-status\` | Server health & metrics | ❌ |
+| \`manage-orders\` | Interactive order manager (status changes from the widget) | ✅ order-actions |
+| \`update-order-status\` | Change one order's status (called by the widget) | ❌ |
 
 ## Resources
 
@@ -499,7 +569,9 @@ server.resource(
 
 ## Notes
 
-- **Widgets** are available for \`search-users\`, \`list-orders\`, and \`get-location-info\`
+- **Widgets** are available for \`search-users\`, \`list-orders\`, \`get-location-info\`, and \`manage-orders\`
+- **Interactive widgets** — the \`order-actions\` widget calls \`update-order-status\` from the UI, so it
+  verifies round-trip \`tools/call\` support in a host. Status changes are in-memory and reset on restart.
 - Use the **request-approval** tool for actions that require human confirmation
 - Use the **generate-report** tool for analytics across sales, usage, performance, and security domains
 `)

@@ -1,6 +1,6 @@
 # Server Capabilities
 
-> 15 tools · 7 resources (4 data + 3 interactive widgets) · 3 prompts  
+> 17 tools · 9 resources (4 data + 5 interactive widgets) · 3 prompts  
 > Built for testing [mcpapps-bridge](https://github.com) with Hermes and other MCP clients.
 
 ---
@@ -61,7 +61,7 @@ Tools marked with 🧪 test whether the bridge correctly handles specific `Clien
 
 ---
 
-## Tools (15)
+## Tools (17)
 
 ### Base CRUD (8 tools)
 
@@ -76,19 +76,33 @@ Tools marked with 🧪 test whether the bridge correctly handles specific `Clien
 | 7 | `search-knowledge` | Content | Full-text search the mock knowledge base |
 | 8 | `get-server-status` | DevOps | Mock server health, uptime, and resource metrics |
 
+### Interactive Widget Tools (2 tools)
+
+Unlike the other widgets (populated by a tool, then read-only), `order-actions` sends work back to
+the server: every button press inside the widget performs a `tools/call`.
+
+| # | Tool | Category | Description |
+|---|------|----------|-------------|
+| 9 | `manage-orders` | Orders | Opens the interactive **Order Manager** widget (optionally filtered by status) |
+| 10 | `update-order-status` | Orders | Changes one order's status; called from the widget and directly callable by a model |
+
+`update-order-status` returns `structuredContent.order` so the widget can patch a single row without
+refetching, plus `previousStatus` and a human-readable `note`. Changes live in memory and reset on
+restart. Unknown order ids are rejected via an `isError: true` tool result.
+
 ### Bridge Capability Tests (7 tools) 🧪
 
 Each tool gracefully degrades when the bridge does not forward the required capability.
 
 | # | Tool | Capability | Behavior when unsupported |
 |---|------|-----------|--------------------------|
-| 9 | `list-roots` | `roots` | Returns `supported: false` with diagnostic note |
-| 10 | `request-approval` | `elicitation` | Returns `approved: false` with diagnostic note |
-| 11 | `collect-feedback` | `elicitation` | Returns `supported: false` with diagnostic note |
-| 12 | `summarize-text` | `sampling` | Returns `supported: false`; also catches client rejection |
-| 13 | `list-client-capabilities` | `capabilities` | Always works — shows what bridge actually forwards |
-| 14 | `get-user-context` | `user context` | Returns `user: null` if identity not forwarded |
-| 15 | `slow-operation` | `progress` | Runs without progress if client didn't request it |
+| 11 | `list-roots` | `roots` | Returns `supported: false` with diagnostic note |
+| 12 | `request-approval` | `elicitation` | Returns `approved: false` with diagnostic note |
+| 13 | `collect-feedback` | `elicitation` | Returns `supported: false` with diagnostic note |
+| 14 | `summarize-text` | `sampling` | Returns `supported: false`; also catches client rejection |
+| 15 | `list-client-capabilities` | `capabilities` | Always works — shows what bridge actually forwards |
+| 16 | `get-user-context` | `user context` | Returns `user: null` if identity not forwarded |
+| 17 | `slow-operation` | `progress` | Runs without progress if client didn't request it |
 
 ---
 
@@ -124,7 +138,7 @@ Simulates a multi-step operation (3–20 configurable steps), calling `ctx.repor
 
 ---
 
-## Resources (7)
+## Resources (9)
 
 ### Static Data Resources
 
@@ -143,7 +157,22 @@ Widgets follow the MCP `ui://` URI scheme (`ui://widget/{name}.html`). Unlike st
 |-----|--------|-------------|--------|
 | `ui://widget/user-search-results.html` | **User Search Results** | `search-users` | Role-badged user cards with avatars, departments, and join dates |
 | `ui://widget/order-list.html` | **Order List** | `list-orders` | Paginated table with color-coded status badges, expandable line items |
+| `ui://widget/order-actions.html` | **Order Manager** | `manage-orders` | Interactive order cards — buttons change status via `update-order-status`, plus an "Ask AI" follow-up button |
 | `ui://widget/location-map.html` | **Location Map** | `get-location-info` | CSS grid map with colored POI pins, clickable details with ratings and addresses |
+
+### Widget Interactivity Reference
+
+| Widget | Client-side | Round-trip to server |
+|--------|-------------|----------------------|
+| `user-search-results` | — | — |
+| `order-list` | Expand/collapse line items | — |
+| `location-map` | Pin selection, hover | — |
+| `order-actions` | Per-row busy state, inline feedback, local row patching | `update-order-status` (**widget → `tools/call`**), `sendFollowUpMessage` (Ask AI) |
+| `product-search-result` | Favorites, display mode, accordion | `useCallTool`, `setState`, `sendFollowUpMessage` (template widget, not exposed as a tool) |
+
+`order-actions` is the widget to use when validating that a host really implements the MCP Apps
+bridge: if the buttons do nothing, the host is rendering HTML without wiring `tools/call` back to
+the server.
 
 ---
 
@@ -169,3 +198,30 @@ All data is static and fake. Every tool introduces a simulated delay (100ms–25
 | Locations | 15 | NYC restaurants, parks, museums, cafés, hotels, shops, landmarks with lat/lng |
 | Documents | 8 | Reports, memos, guides, specs — with tag-based categorization |
 | Knowledge Base | 8 | Account, API, and general articles — full-text searchable |
+
+Order statuses changed through `update-order-status` are held in memory only, so restarting the
+server restores the original dataset.
+
+---
+
+## Testing Widgets in the Inspector
+
+The bundled inspector (`@mcp-use/inspector`, shipped with `mcp-use dev` / `mcp-use build`) renders
+widgets in an iframe and implements the MCP Apps host side, so interactivity can be exercised
+without a separate host:
+
+1. `pnpm dev:v1`, then open <http://localhost:8760/inspector>.
+2. Go to **Tools**, pick `manage-orders`, and press **Execute**.
+3. The response panel switches to **Component (MCP Apps)** and renders the widget in an iframe.
+   **Raw JSON** shows the same response as data.
+4. Press a status button inside the widget — the server log shows a `tools/call: update-order-status`
+   entry and the row updates in place.
+5. Press **Ask AI** — the inspector raises a **Widget follow-up** notification containing the message
+   the widget asked the conversation to handle.
+
+The inspector has no LLM attached, so `sendFollowUpMessage` surfaces as a notification rather than
+producing an assistant reply. That is expected; a real host would instead start a new turn.
+
+The inspector ships with dev mode only. Production runs skip it — rebuild with
+`mcp-use build --with-inspector` to include it. Widgets are served in both modes, at
+`/mcp-use/widgets/<name>`.
