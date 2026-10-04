@@ -23,9 +23,17 @@ const orderSchema = z.object({
   shippedAt: z.string().nullable(),
 });
 
+const historyEntrySchema = z.object({
+  orderId: z.string(),
+  from: orderStatusSchema,
+  to: orderStatusSchema,
+});
+
 const propsSchema = z.object({
   orders: z.array(orderSchema),
   total: z.number(),
+  history: z.array(historyEntrySchema),
+  historyDepth: z.number(),
 });
 
 export const widgetMetadata: WidgetMetadata = {
@@ -37,12 +45,24 @@ export const widgetMetadata: WidgetMetadata = {
 const updateResultSchema = z.object({
   order: orderSchema,
   previousStatus: orderStatusSchema,
+  history: z.array(historyEntrySchema),
+  historyDepth: z.number(),
+  note: z.string(),
+});
+
+const undoResultSchema = z.object({
+  undone: z.array(historyEntrySchema),
+  orders: z.array(orderSchema),
+  history: z.array(historyEntrySchema),
+  historyDepth: z.number(),
   note: z.string(),
 });
 
 type Props = z.infer<typeof propsSchema>;
 type Order = Props["orders"][number];
 type OrderStatus = z.infer<typeof orderStatusSchema>;
+type HistoryEntry = z.infer<typeof historyEntrySchema>;
+type History = { entries: HistoryEntry[]; depth: number };
 
 const statusConfig: Record<OrderStatus, { label: string; color: string; icon: string }> = {
   pending: { label: "Pending", color: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300", icon: "⏳" },
@@ -76,18 +96,27 @@ function sameOrders(a: Order[], b: Order[]): boolean {
 export default function OrderActions() {
   const { props, isPending, sendFollowUpMessage } = useWidget<Props>();
   const { callTool } = useCallTool("update-order-status");
+  const { callTool: callUndo } = useCallTool("undo-order-status");
 
   const [orders, setOrders] = useState<Order[]>([]);
+  const [history, setHistory] = useState<History>({ entries: [], depth: 0 });
   const [busyOrderId, setBusyOrderId] = useState<string | null>(null);
+  const [isUndoing, setIsUndoing] = useState(false);
   const [feedback, setFeedback] = useState<{ tone: "success" | "error"; text: string } | null>(null);
 
+  const canUndo = history.depth > 0;
+
   // Re-seed from props so the widget resets whenever the host delivers a new tool result.
-  // Bailing out on an unchanged list avoids a setState/re-render loop if props are recreated.
+  // Bailing out on an unchanged snapshot avoids a setState/re-render loop if props are recreated,
+  // while still keeping locally-applied changes from being thrown away.
   useEffect(() => {
     const incoming = props.orders;
     if (!incoming) return;
     setOrders((prev) => (sameOrders(prev, incoming) ? prev : incoming));
-  }, [props.orders]);
+    if (props.history) {
+      setHistory({ entries: props.history, depth: props.historyDepth ?? props.history.length });
+    }
+  }, [props.orders, props.history, props.historyDepth]);
 
   if (isPending) {
     return (
@@ -118,8 +147,11 @@ export default function OrderActions() {
           if (parsed.success) {
             const updated = parsed.data.order;
             setOrders((prev) => prev.map((o) => (o.id === updated.id ? updated : o)));
+            // The server owns the undo stack, so mirror the history it returns.
+            setHistory({ entries: parsed.data.history, depth: parsed.data.historyDepth });
             setFeedback({ tone: "success", text: parsed.data.note });
           } else {
+            setOrders((prev) => prev.map((o) => (o.id === order.id ? { ...o, status } : o)));
             setFeedback({ tone: "success", text: `Order ${order.id} updated to "${status}".` });
           }
         },
@@ -134,12 +166,40 @@ export default function OrderActions() {
     );
   };
 
+  const undo = () => {
+    setIsUndoing(true);
+    setFeedback(null);
+
+    callUndo({ steps: 1 }, {
+      onSuccess: (result) => {
+        const parsed = undoResultSchema.safeParse(result?.structuredContent);
+        if (!parsed.success) {
+          setFeedback({ tone: "error", text: "Undo response could not be read." });
+          return;
+        }
+        const restored = new Map(parsed.data.orders.map((o) => [o.id, o]));
+        setOrders((prev) => prev.map((o) => restored.get(o.id) ?? o));
+        setHistory({ entries: parsed.data.history, depth: parsed.data.historyDepth });
+        setFeedback({ tone: "success", text: parsed.data.note });
+      },
+      onError: (err) => {
+        setFeedback({
+          tone: "error",
+          text: err instanceof Error ? err.message : "Undo failed.",
+        });
+      },
+      onSettled: () => setIsUndoing(false),
+    });
+  };
+
   const summarize = () => {
     const summary = orders.map((o) => `${o.id} (${o.customer}): ${o.status}`).join(", ");
     sendFollowUpMessage(
       `Summarize the current state of these orders and flag anything that needs attention: ${summary}`
     );
   };
+
+  const busy = isUndoing || busyOrderId !== null;
 
   return (
     <McpUseProvider autoSize>
@@ -152,13 +212,24 @@ export default function OrderActions() {
               {orders.length} of {props.total} order(s) shown · pick an action to update the mock order
             </p>
           </div>
-          <button
-            type="button"
-            onClick={summarize}
-            className="flex-shrink-0 px-3 py-1.5 text-xs font-medium rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors cursor-pointer"
-          >
-            ✨ Ask AI
-          </button>
+          <div className="flex-shrink-0 flex items-center gap-2">
+            <button
+              type="button"
+              onClick={undo}
+              disabled={!canUndo || busy}
+              title={canUndo ? "Reverse the most recent status change" : "No changes to undo"}
+              className="px-3 py-1.5 text-xs font-medium rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer"
+            >
+              ↩︎ Undo{canUndo && ` (${history.depth})`}
+            </button>
+            <button
+              type="button"
+              onClick={summarize}
+              className="px-3 py-1.5 text-xs font-medium rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors cursor-pointer"
+            >
+              ✨ Ask AI
+            </button>
+          </div>
         </div>
 
         {/* Result of the last action */}
@@ -241,9 +312,27 @@ export default function OrderActions() {
           </div>
         )}
 
+        {/* Recent changes — gives the scenario a visible, reversible timeline */}
+        {history.entries.length > 0 && (
+          <div className="mt-4 pt-3 border-t border-gray-200 dark:border-gray-700">
+            <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">
+              Recent changes ({history.depth} reversible)
+            </p>
+            <ul className="space-y-1">
+              {history.entries.map((entry, i) => (
+                <li key={`${entry.orderId}-${i}`} className="text-xs text-gray-400 dark:text-gray-500">
+                  <span className="font-mono">{entry.orderId}</span> {entry.from} → {entry.to}
+                  {i === 0 && <span className="ml-1 text-gray-500 dark:text-gray-400">(undo reverses this)</span>}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
         {/* Footer */}
         <div className="mt-4 pt-3 border-t border-gray-200 dark:border-gray-700 text-xs text-gray-400 dark:text-gray-500 text-center">
-          Actions call <span className="font-mono">update-order-status</span> — mock data, resets on restart
+          Actions call <span className="font-mono">update-order-status</span>, Undo calls{" "}
+          <span className="font-mono">undo-order-status</span> — mock data, resets on restart
         </div>
       </div>
     </McpUseProvider>

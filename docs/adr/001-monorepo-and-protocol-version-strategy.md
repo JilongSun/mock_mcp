@@ -8,7 +8,7 @@
 
 ## Context
 
-This project is a **mock MCP server** designed to test MCP bridges (specifically [mcpapps-bridge](https://github.com)) and MCP clients against different protocol versions. It simulates an enterprise operations platform with 17 tools, 9 resources, and 3 prompts — all backed by static mock data.
+This project is a **mock MCP server** designed to test MCP bridges (specifically [mcpapps-bridge](https://github.com)) and MCP clients against different protocol versions. It simulates an enterprise operations platform with 18 tools, 9 resources, and 3 prompts — all backed by static mock data.
 
 We needed to:
 

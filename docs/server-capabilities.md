@@ -1,6 +1,6 @@
 # Server Capabilities
 
-> 17 tools · 9 resources (4 data + 5 interactive widgets) · 3 prompts  
+> 18 tools · 9 resources (4 data + 5 interactive widgets) · 3 prompts  
 > Built for testing [mcpapps-bridge](https://github.com) with Hermes and other MCP clients.
 
 ---
@@ -61,7 +61,7 @@ Tools marked with 🧪 test whether the bridge correctly handles specific `Clien
 
 ---
 
-## Tools (17)
+## Tools (18)
 
 ### Base CRUD (8 tools)
 
@@ -76,7 +76,7 @@ Tools marked with 🧪 test whether the bridge correctly handles specific `Clien
 | 7 | `search-knowledge` | Content | Full-text search the mock knowledge base |
 | 8 | `get-server-status` | DevOps | Mock server health, uptime, and resource metrics |
 
-### Interactive Widget Tools (2 tools)
+### Interactive Widget Tools (3 tools)
 
 Unlike the other widgets (populated by a tool, then read-only), `order-actions` sends work back to
 the server: every button press inside the widget performs a `tools/call`.
@@ -85,10 +85,34 @@ the server: every button press inside the widget performs a `tools/call`.
 |---|------|----------|-------------|
 | 9 | `manage-orders` | Orders | Opens the interactive **Order Manager** widget (optionally filtered by status) |
 | 10 | `update-order-status` | Orders | Changes one order's status; called from the widget and directly callable by a model |
+| 11 | `undo-order-status` | Orders | Reverses the most recent change(s) — backs the widget's Undo button |
 
 `update-order-status` returns `structuredContent.order` so the widget can patch a single row without
-refetching, plus `previousStatus` and a human-readable `note`. Changes live in memory and reset on
-restart. Unknown order ids are rejected via an `isError: true` tool result.
+refetching, plus `previousStatus`, the current `history`/`historyDepth`, and a human-readable `note`.
+Unknown order ids are rejected via an `isError: true` tool result, and a no-op change (setting a
+status an order already has) is reported without being recorded for undo.
+
+`undo-order-status` takes an optional `steps` (1–20, default `1`) and unwinds the log in reverse
+chronological order, restoring each order's previous status **and** its previous `shippedAt`. That
+ordering matters when the same order was edited repeatedly: reverting `cancelled → delivered → shipped`
+lands on the exact pre-edit state. Unwinding an empty log returns `isError: true`.
+
+Both tools return the post-change `history` / `historyDepth` so the widget mirrors server state
+instead of deriving it locally.
+
+### Interactive State and Reset Semantics
+
+Because this is a mock, mutated order state is process-local:
+
+| Event | Order data | Undo history | Why |
+|-------|-----------|--------------|-----|
+| Tool call / widget button | changes | grows | In-memory mutation of the shared `mockOrders` array |
+| `undo-order-status` | reverts | shrinks | Pops entries off the log |
+| Dev-mode code edit (HMR on `src/server.ts`) | **survives** | **survives** | HMR keeps the live `MCPServer` instance, and `mockOrders` lives in the separate `@mock-mcp/shared` module, which is not re-imported |
+| Server restart (`stop` + `start`, or `run`) | **resets** | **cleared** | New process → fresh module graph |
+| Multi-worker mode (`--workers N`) | **diverges per worker** | **diverges per worker** | Each worker is its own process with its own copy |
+
+Use `undo-order-status` to roll a scenario back without restarting the server.
 
 ### Bridge Capability Tests (7 tools) 🧪
 
@@ -96,13 +120,13 @@ Each tool gracefully degrades when the bridge does not forward the required capa
 
 | # | Tool | Capability | Behavior when unsupported |
 |---|------|-----------|--------------------------|
-| 11 | `list-roots` | `roots` | Returns `supported: false` with diagnostic note |
-| 12 | `request-approval` | `elicitation` | Returns `approved: false` with diagnostic note |
-| 13 | `collect-feedback` | `elicitation` | Returns `supported: false` with diagnostic note |
-| 14 | `summarize-text` | `sampling` | Returns `supported: false`; also catches client rejection |
-| 15 | `list-client-capabilities` | `capabilities` | Always works — shows what bridge actually forwards |
-| 16 | `get-user-context` | `user context` | Returns `user: null` if identity not forwarded |
-| 17 | `slow-operation` | `progress` | Runs without progress if client didn't request it |
+| 12 | `list-roots` | `roots` | Returns `supported: false` with diagnostic note |
+| 13 | `request-approval` | `elicitation` | Returns `approved: false` with diagnostic note |
+| 14 | `collect-feedback` | `elicitation` | Returns `supported: false` with diagnostic note |
+| 15 | `summarize-text` | `sampling` | Returns `supported: false`; also catches client rejection |
+| 16 | `list-client-capabilities` | `capabilities` | Always works — shows what bridge actually forwards |
+| 17 | `get-user-context` | `user context` | Returns `user: null` if identity not forwarded |
+| 18 | `slow-operation` | `progress` | Runs without progress if client didn't request it |
 
 ---
 
@@ -157,7 +181,7 @@ Widgets follow the MCP `ui://` URI scheme (`ui://widget/{name}.html`). Unlike st
 |-----|--------|-------------|--------|
 | `ui://widget/user-search-results.html` | **User Search Results** | `search-users` | Role-badged user cards with avatars, departments, and join dates |
 | `ui://widget/order-list.html` | **Order List** | `list-orders` | Paginated table with color-coded status badges, expandable line items |
-| `ui://widget/order-actions.html` | **Order Manager** | `manage-orders` | Interactive order cards — buttons change status via `update-order-status`, plus an "Ask AI" follow-up button |
+| `ui://widget/order-actions.html` | **Order Manager** | `manage-orders` | Interactive order cards — buttons change status via `update-order-status`, an **Undo** button reverses changes via `undo-order-status`, plus an "Ask AI" follow-up button |
 | `ui://widget/location-map.html` | **Location Map** | `get-location-info` | CSS grid map with colored POI pins, clickable details with ratings and addresses |
 
 ### Widget Interactivity Reference
@@ -167,7 +191,7 @@ Widgets follow the MCP `ui://` URI scheme (`ui://widget/{name}.html`). Unlike st
 | `user-search-results` | — | — |
 | `order-list` | Expand/collapse line items | — |
 | `location-map` | Pin selection, hover | — |
-| `order-actions` | Per-row busy state, inline feedback, local row patching | `update-order-status` (**widget → `tools/call`**), `sendFollowUpMessage` (Ask AI) |
+| `order-actions` | Per-row busy state, inline feedback, local row patching, reversible change log | `update-order-status` and `undo-order-status` (**widget → `tools/call`**), `sendFollowUpMessage` (Ask AI) |
 | `product-search-result` | Favorites, display mode, accordion | `useCallTool`, `setState`, `sendFollowUpMessage` (template widget, not exposed as a tool) |
 
 `order-actions` is the widget to use when validating that a host really implements the MCP Apps
@@ -199,8 +223,11 @@ All data is static and fake. Every tool introduces a simulated delay (100ms–25
 | Documents | 8 | Reports, memos, guides, specs — with tag-based categorization |
 | Knowledge Base | 8 | Account, API, and general articles — full-text searchable |
 
-Order statuses changed through `update-order-status` are held in memory only, so restarting the
-server restores the original dataset.
+Order statuses changed through `update-order-status` are held in memory only. Use **Undo** in the
+widget (or call `undo-order-status`) to roll a scenario back without restarting; restarting the
+server also restores the original dataset and clears the undo log. See
+[Interactive State and Reset Semantics](#interactive-state-and-reset-semantics) for the full matrix,
+including how dev-mode HMR and multi-worker mode behave.
 
 ---
 
@@ -215,8 +242,10 @@ without a separate host:
 3. The response panel switches to **Component (MCP Apps)** and renders the widget in an iframe.
    **Raw JSON** shows the same response as data.
 4. Press a status button inside the widget — the server log shows a `tools/call: update-order-status`
-   entry and the row updates in place.
-5. Press **Ask AI** — the inspector raises a **Widget follow-up** notification containing the message
+   entry and the row updates in place. The button reads `↩︎ Undo (1)` and a "Recent changes" list appears.
+5. Press **Undo** — the server log shows a `tools/call: undo-order-status` entry, the row reverts, and
+   the button goes back to a disabled `↩︎ Undo`. Until you make a change, Undo starts disabled.
+6. Press **Ask AI** — the inspector raises a **Widget follow-up** notification containing the message
    the widget asked the conversation to handle.
 
 The inspector has no LLM attached, so `sendFollowUpMessage` surfaces as a notification rather than

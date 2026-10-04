@@ -61,6 +61,8 @@ const orderItemSchema = z.object({
 
 const orderStatusSchema = z.enum(["pending", "processing", "shipped", "delivered", "cancelled"]);
 
+type OrderStatus = z.infer<typeof orderStatusSchema>;
+
 const orderRowSchema = z.object({
   id: z.string(),
   customer: z.string(),
@@ -459,18 +461,51 @@ server.tool(
   }
 );
 
+// ─── In-memory order mutation log (mock — cleared on restart) ────────
+// Interactive widgets mutate `mockOrders` in place, so every accepted change is also pushed here
+// to keep the scenario reversible. The stack only lives as long as the process.
+interface OrderStatusChange {
+  orderId: string;
+  from: OrderStatus;
+  to: OrderStatus;
+  fromShippedAt: string | null;
+}
+
+const orderStatusHistory: OrderStatusChange[] = [];
+
+const historyEntrySchema = z.object({
+  orderId: z.string(),
+  from: orderStatusSchema,
+  to: orderStatusSchema,
+});
+
+/** Most recent changes first, capped at the display limit — what the widget's Undo button unwinds. */
+function recentOrderHistory(): { orderId: string; from: OrderStatus; to: OrderStatus }[] {
+  return orderStatusHistory
+    .slice(-5)
+    .reverse()
+    .map((c) => ({ orderId: c.orderId, from: c.from, to: c.to }));
+}
+
+const orderHistorySchema = z.array(historyEntrySchema);
+
 // ─── 16. manage-orders (interactive widget) ──────────────────────────
 server.tool(
   {
     name: "manage-orders",
     description:
-      "Open an interactive order management widget where order statuses can be changed with a single click. Every button in the widget calls the update-order-status tool, which makes this tool an end-to-end test of widget → server interactivity.",
+      "Open an interactive order management widget where order statuses can be changed with a single click. Every button in the widget calls the update-order-status tool, and the widget's Undo button calls undo-order-status — making this an end-to-end test of widget → server interactivity in both directions.",
     schema: z.object({
       status: orderStatusSchema.optional().describe("Only show orders currently in this status"),
       limit: z.number().min(1).max(20).optional().default(5).describe("Maximum number of orders to show"),
     }),
     annotations: { readOnlyHint: false, destructiveHint: true, openWorldHint: false },
-    outputSchema: z.object({ orders: z.array(orderRowSchema), total: z.number() }),
+    outputSchema: z.object({
+      orders: z.array(orderRowSchema),
+      total: z.number(),
+      history: orderHistorySchema,
+      historyDepth: z.number(),
+    }),
     widget: { name: "order-actions", invoking: "Opening order manager...", invoked: "Order manager ready" },
   },
   async ({ status, limit }) => {
@@ -478,9 +513,9 @@ server.tool(
     const filtered = status ? mockOrders.filter((o) => o.status === status) : mockOrders;
     const orders = filtered.slice(0, limit).map((o) => ({ ...o }));
     return widget({
-      props: { orders, total: orders.length },
+      props: { orders, total: orders.length, history: recentOrderHistory(), historyDepth: orderStatusHistory.length },
       output: text(
-        `Order manager opened with ${orders.length} order(s)${status ? ` in status "${status}"` : ""}. Status changes are made from inside the widget.`
+        `Order manager opened with ${orders.length} order(s)${status ? ` in status "${status}"` : ""}. Status changes are made from inside the widget; ${orderStatusHistory.length} reversible change(s) available.`
       ),
     });
   }
@@ -491,13 +526,19 @@ server.tool(
   {
     name: "update-order-status",
     description:
-      "Update the status of a mock order. Primarily invoked by the order-actions widget, but also usable directly by a model. Changes are in-memory and reset when the server restarts.",
+      "Update the status of a mock order. Primarily invoked by the order-actions widget, but also usable directly by a model. Each accepted change is pushed onto an in-memory undo stack (see undo-order-status). Changes and history reset when the server restarts.",
     schema: z.object({
       orderId: z.string().describe("Order id to update (e.g., 'ord-1001'). Use list-orders to discover ids."),
       status: orderStatusSchema.describe("New status for the order"),
     }),
     annotations: { readOnlyHint: false, destructiveHint: true, openWorldHint: false },
-    outputSchema: z.object({ order: orderRowSchema, previousStatus: orderStatusSchema, note: z.string() }),
+    outputSchema: z.object({
+      order: orderRowSchema,
+      previousStatus: orderStatusSchema,
+      history: orderHistorySchema,
+      historyDepth: z.number(),
+      note: z.string(),
+    }),
   },
   async ({ orderId, status }) => {
     await mockDelay(200, 600);
@@ -507,20 +548,83 @@ server.tool(
     }
 
     const previousStatus = order.status;
+    if (previousStatus === status) {
+      return object({
+        order: { ...order },
+        previousStatus,
+        history: recentOrderHistory(),
+        historyDepth: orderStatusHistory.length,
+        note: `Order ${orderId} was already "${status}" — nothing changed, so nothing was recorded for undo.`,
+      });
+    }
+
+    const fromShippedAt = order.shippedAt;
     order.status = status;
     if (status === "shipped" || status === "delivered") {
       order.shippedAt ??= new Date().toISOString().slice(0, 10);
     } else {
       order.shippedAt = null;
     }
+    orderStatusHistory.push({ orderId, from: previousStatus, to: status, fromShippedAt });
 
     return object({
       order: { ...order },
       previousStatus,
-      note:
-        previousStatus === status
-          ? `Order ${orderId} was already "${status}".`
-          : `Order ${orderId}: ${previousStatus} → ${status}. In-memory change — reverts on restart.`,
+      history: recentOrderHistory(),
+      historyDepth: orderStatusHistory.length,
+      note: `Order ${orderId}: ${previousStatus} → ${status}. In-memory change — reverts on restart or via undo-order-status.`,
+    });
+  }
+);
+
+// ─── 18. undo-order-status (reverses widget-driven changes) ──────────
+server.tool(
+  {
+    name: "undo-order-status",
+    description:
+      "Reverse the most recent order status change(s) made since the server started, restoring each order's previous status and ship date. Called by the Undo button in the order-actions widget, and also callable by a model. Use this to roll the mock scenario back to a known state without restarting the server.",
+    schema: z.object({
+      steps: z.number().min(1).max(20).optional().default(1).describe("How many of the most recent changes to reverse"),
+    }),
+    annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false },
+    outputSchema: z.object({
+      undone: z.array(historyEntrySchema),
+      orders: z.array(orderRowSchema),
+      history: orderHistorySchema,
+      historyDepth: z.number(),
+      note: z.string(),
+    }),
+  },
+  async ({ steps }) => {
+    await mockDelay(150, 400);
+    if (orderStatusHistory.length === 0) {
+      return error("Nothing to undo — no order status changes have been made since the server started.");
+    }
+
+    // Unwind in reverse chronological order so repeated edits to one order restore correctly.
+    const count = Math.min(steps, orderStatusHistory.length);
+    const undone: { orderId: string; from: OrderStatus; to: OrderStatus }[] = [];
+    const restored = new Map<string, MockOrder>();
+
+    for (let i = 0; i < count; i++) {
+      const change = orderStatusHistory.pop();
+      if (!change) break;
+      const order = mockOrders.find((o) => o.id === change.orderId);
+      if (!order) continue;
+
+      order.status = change.from;
+      order.shippedAt = change.fromShippedAt;
+      undone.push({ orderId: change.orderId, from: change.to, to: change.from });
+      restored.set(order.id, { ...order });
+    }
+
+    const summary = undone.map((u) => `${u.orderId}: ${u.from} → ${u.to}`).join("; ");
+    return object({
+      undone,
+      orders: [...restored.values()],
+      history: recentOrderHistory(),
+      historyDepth: orderStatusHistory.length,
+      note: `Undid ${undone.length} change(s) — ${summary}. ${orderStatusHistory.length} reversible change(s) left.`,
     });
   }
 );
@@ -557,6 +661,7 @@ server.resource(
 | \`get-server-status\` | Server health & metrics | ❌ |
 | \`manage-orders\` | Interactive order manager (status changes from the widget) | ✅ order-actions |
 | \`update-order-status\` | Change one order's status (called by the widget) | ❌ |
+| \`undo-order-status\` | Reverse recent status changes (called by the widget's Undo button) | ❌ |
 
 ## Resources
 
@@ -570,8 +675,10 @@ server.resource(
 ## Notes
 
 - **Widgets** are available for \`search-users\`, \`list-orders\`, \`get-location-info\`, and \`manage-orders\`
-- **Interactive widgets** — the \`order-actions\` widget calls \`update-order-status\` from the UI, so it
-  verifies round-trip \`tools/call\` support in a host. Status changes are in-memory and reset on restart.
+- **Interactive widgets** — the \`order-actions\` widget calls \`update-order-status\` and
+  \`undo-order-status\` from the UI, so it verifies round-trip \`tools/call\` support in a host.
+- Order status changes are in-memory: \`undo-order-status\` reverses them, and a server restart
+  restores the original dataset and clears the undo log.
 - Use the **request-approval** tool for actions that require human confirmation
 - Use the **generate-report** tool for analytics across sales, usage, performance, and security domains
 `)
