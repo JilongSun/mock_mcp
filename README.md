@@ -32,10 +32,10 @@ pnpm dev:v1       # Run the SEP-1865 MCP Apps server
 Open [http://localhost:8760/inspector](http://localhost:8760/inspector) to explore tools, resources, and widgets interactively.
 
 `manage-orders` renders the **Order Manager** — an interactive widget whose buttons call the
-`update-order-status` tool back on the server, and whose **Undo** button calls `undo-order-status`.
+`manage-orders` tool back on the server (with `action: "update-status"` or `action: "undo"`).
 It is the quickest way to check that a host wires the MCP Apps bridge end to end: in the inspector,
 execute `manage-orders`, switch the response panel to **Component (MCP Apps)**, then press a status
-button and watch `tools/call: update-order-status` appear in the server log. Press **Undo** to roll
+button and watch `tools/call: manage-orders` appear in the server log. Press **Undo** to roll
 the change back without restarting. See [`docs/server-capabilities.md`](./docs/server-capabilities.md#testing-widgets-in-the-inspector).
 
 > The inspector is only served by `pnpm dev:v1`. Production runs (`pnpm run:v1` / `pnpm start:v1`)
