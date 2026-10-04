@@ -30,7 +30,6 @@ const historyEntrySchema = z.object({
 });
 
 const propsSchema = z.object({
-  action: z.enum(["open", "update-status", "undo"]),
   orders: z.array(orderSchema),
   total: z.number(),
   history: z.array(historyEntrySchema),
@@ -89,7 +88,7 @@ function sameOrders(a: Order[], b: Order[]): boolean {
 
 export default function OrderActions() {
   const { props, isPending, sendFollowUpMessage } = useWidget<Props>();
-  const { callTool } = useCallTool("manage-orders");
+  const { callTool } = useCallTool("apply-order-action");
 
   const [orders, setOrders] = useState<Order[]>([]);
   const [history, setHistory] = useState<HistoryEntry[]>([]);
@@ -307,8 +306,7 @@ export default function OrderActions() {
 
         {/* Footer */}
         <div className="mt-4 pt-3 border-t border-gray-200 dark:border-gray-700 text-xs text-gray-400 dark:text-gray-500 text-center">
-          Actions call <span className="font-mono">manage-orders</span> with{" "}
-          <span className="font-mono">action="update-status"</span> / <span className="font-mono">"undo"</span> — mock data, resets on restart
+          Actions call <span className="font-mono">apply-order-action</span> — mock data, resets on restart
         </div>
       </div>
     </McpUseProvider>

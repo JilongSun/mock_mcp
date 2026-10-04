@@ -44,5 +44,5 @@ const transport = new StdioServerTransport();
 await server.nativeServer.connect(transport);
 
 console.error("🚀 Mock MCP Server running (stdio mode)");
-console.error("   Tools: 16 | Resources: 9 (5 widgets) | Prompts: 3");
+console.error("   Tools: 17 | Resources: 9 (5 widgets) | Prompts: 3");
 console.error("   All data is MOCK — no real operations are performed.");

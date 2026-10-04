@@ -31,11 +31,12 @@ pnpm dev:v1       # 运行 SEP-1865 MCP Apps 服务器
 
 打开 [http://localhost:8760/inspector](http://localhost:8760/inspector) 即可交互式地浏览工具、资源和小组件。
 
-`manage-orders` 会渲染**订单管理器（Order Manager）**——一个可交互的小组件，其按钮会回调服务器上的
-`manage-orders` 工具（带 `action: "update-status"` 或 `action: "undo"`）。这是验证宿主是否完整接通
-MCP Apps 桥接的最快方式：在 inspector 中执行 `manage-orders`，把响应面板切到 **Component (MCP Apps)**，
-然后点击状态按钮，服务器日志中就会出现 `tools/call: manage-orders`。点击 **Undo** 即可在不重启的前提下
-把改动回滚。详见 [`docs/server-capabilities.md`](./docs/server-capabilities.md#testing-widgets-in-the-inspector)。
+`manage-orders` 会打开**订单管理器（Order Manager）**小组件，其按钮回调一个独立的、widget 内部专用的
+辅助工具 `apply-order-action`（`action: "update-status"` 或 `action: "undo"`）。把两者分开，启动器就能保持
+单一职责，widget 专用参数也不会暴露给 agent。这是验证宿主是否完整接通 MCP Apps 桥接的最快方式：在
+inspector 中执行 `manage-orders`，把响应面板切到 **Component (MCP Apps)**，然后点击状态按钮，服务器日志中
+就会出现 `tools/call: apply-order-action`。点击 **Undo** 即可在不重启的前提下把改动回滚。详见
+[`docs/server-capabilities.md`](./docs/server-capabilities.md#testing-widgets-in-the-inspector)。
 
 > inspector 仅在 `pnpm dev:v1` 下提供。生产运行（`pnpm run:v1` / `pnpm start:v1`）会跳过它——如需在
 > 非开发模式下使用，请用 `mcp-use build --with-inspector` 构建。小组件在两种模式下都会通过
