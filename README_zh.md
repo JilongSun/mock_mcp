@@ -160,4 +160,4 @@ pnpm start:v1 -- -w 5
 
 保持这些产物位于各自的包内，可以确保 Node 的包导出解析正常工作。根包负责编排构建，但不会把各自独立版本化的 workspace 包扁平化输出到共享的根 `dist`。
 
-完整的能力细节请见 [`docs/server-capabilities.md`](./docs/server-capabilities.md)。架构决策请见 [`docs/adr/`](./docs/adr/)。
+完整的能力细节请见 [`docs/server-capabilities_zh.md`](./docs/server-capabilities_zh.md)（[English](./docs/server-capabilities.md)）。架构决策请见 [`docs/adr/`](./docs/adr/)。

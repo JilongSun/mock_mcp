@@ -164,4 +164,4 @@ Each workspace package owns its compiled output:
 
 Keeping these outputs package-local preserves Node package export resolution. The root package orchestrates builds but does not flatten independently versioned workspace packages into a shared root `dist`.
 
-For full capability details, see [`docs/server-capabilities.md`](./docs/server-capabilities.md). For architecture decisions, see [`docs/adr/`](./docs/adr/).
+For full capability details, see [`docs/server-capabilities.md`](./docs/server-capabilities.md) ([简体中文](./docs/server-capabilities_zh.md)). For architecture decisions, see [`docs/adr/`](./docs/adr/).

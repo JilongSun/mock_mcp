@@ -1,5 +1,7 @@
 # Server Capabilities
 
+English | [简体中文](./server-capabilities_zh.md)
+
 > 17 tools · 9 resources (4 data + 5 interactive widgets) · 3 prompts  
 > Built for testing [mcpapps-bridge](https://github.com) with Hermes and other MCP clients.
 
@@ -28,7 +30,7 @@ Results are the **nearest matches first**, capped at 8. Every argument is option
 default to Union Square, Manhattan (`40.7359, -73.9911`) and `radius` defaults to 5 km, so the tool
 can be executed with no arguments at all. All mock POIs are in NYC and sit within ~6 km of that
 default, so larger radii converge on the full set. See
-[Location Search Defaults](#location-search-defaults).
+[Location Search Defaults](#location-search-defaults-get-location-info).
 
 ### Workflow Automation with Approvals
 
@@ -139,13 +141,13 @@ Each tool gracefully degrades when the bridge does not forward the required capa
 
 | # | Tool | Capability | Behavior when unsupported |
 |---|------|-----------|--------------------------|
-| 12 | `list-roots` | `roots` | Returns `supported: false` with diagnostic note |
-| 13 | `request-approval` | `elicitation` | Returns `approved: false` with diagnostic note |
-| 14 | `collect-feedback` | `elicitation` | Returns `supported: false` with diagnostic note |
-| 15 | `summarize-text` | `sampling` | Returns `supported: false`; also catches client rejection |
-| 16 | `list-client-capabilities` | `capabilities` | Always works — shows what bridge actually forwards |
-| 17 | `get-user-context` | `user context` | Returns `user: null` if identity not forwarded |
-| 18 | `slow-operation` | `progress` | Runs without progress if client didn't request it |
+| 11 | `list-roots` | `roots` | Returns `supported: false` with diagnostic note |
+| 12 | `request-approval` | `elicitation` | Returns `approved: false` with diagnostic note |
+| 13 | `collect-feedback` | `elicitation` | Returns `supported: false` with diagnostic note |
+| 14 | `summarize-text` | `sampling` | Returns `supported: false`; also catches client rejection |
+| 15 | `list-client-capabilities` | `capabilities` | Always works — shows what bridge actually forwards |
+| 16 | `get-user-context` | `user context` | Returns `user: null` if identity not forwarded |
+| 17 | `slow-operation` | `progress` | Runs without progress if client didn't request it |
 
 ---
 
