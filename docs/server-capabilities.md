@@ -24,6 +24,12 @@ The `get-location-info` tool + `location-map` widget delivers an interactive poi
 - *"Are there any parks close to the hotel?"* → filtered by park type, with ratings and addresses
 - Filter by restaurant, park, museum, café, hotel, shopping, or landmark — adjust radius from 0.01 to 50 km
 
+Results are the **nearest matches first**, capped at 8. Every argument is optional: `lat`/`lng`
+default to Union Square, Manhattan (`40.7359, -73.9911`) and `radius` defaults to 5 km, so the tool
+can be executed with no arguments at all. All mock POIs are in NYC and sit within ~6 km of that
+default, so larger radii converge on the full set. See
+[Location Search Defaults](#location-search-defaults).
+
 ### Workflow Automation with Approvals
 
 The server supports human-in-the-loop elicitation workflows:
@@ -71,7 +77,7 @@ Tools marked with 🧪 test whether the bridge correctly handles specific `Clien
 | 2 | `get-product-details` | Catalog | Get detailed product info, stock, and ratings by ID |
 | 3 | `list-orders` | Orders | Paginated order listing with status filter |
 | 4 | `create-document` | Content | Simulate document creation (report, memo, guide, spec) |
-| 5 | `get-location-info` | Location | Find nearby POIs around a lat/lng coordinate |
+| 5 | `get-location-info` | Location | Find nearby POIs around a lat/lng coordinate (all params optional — defaults to Union Square, NYC) |
 | 6 | `generate-report` | Analytics | Generate mock reports (sales, usage, performance, security) |
 | 7 | `search-knowledge` | Content | Full-text search the mock knowledge base |
 | 8 | `get-server-status` | DevOps | Mock server health, uptime, and resource metrics |
@@ -172,6 +178,35 @@ Returns `ctx.client.user()` — subject, locale, timezone, location. Verifies th
 ### Progress (`slow-operation`)
 
 Simulates a multi-step operation (3–20 configurable steps), calling `ctx.reportProgress(i, total)` at each step with log messages. Verifies the bridge forwards progress notifications.
+
+### Location Search Defaults (`get-location-info`)
+
+`get-location-info` is meant to be runnable by hand before an agent ever touches it, so nothing is
+required and every parameter carries an inline hint:
+
+| Parameter | Required | Default | Hint shown in the client |
+|-----------|----------|---------|--------------------------|
+| `lat` | no | `40.7359` | Latitude of the search center. Default 40.7359 (Union Square, Manhattan)… |
+| `lng` | no | `-73.9911` | Longitude of the search center. Default -73.9911 (Union Square, Manhattan). |
+| `radius` | no | `5` | Search radius in km (0.01–50)… Try 0.5 for a walkable cluster, 3 for a neighborhood. |
+| `types` | no | all 7 | Restrict to specific POI types, e.g. `["restaurant","cafe"]`. |
+
+`required` is empty, and inspectors that render MCP defaults pre-fill `40.7359 / -73.9911 / 5`, so
+"Execute" works immediately. The defaults are chosen because every mock POI is in NYC and all 15 sit
+within ~6 km of Union Square:
+
+| Radius | POIs in range |
+|--------|---------------|
+| 1 km | 3 |
+| 3 km | 9 |
+| 5 km (default) | 13 |
+| above ~6 km | all 15 |
+
+Results are filtered by `radius` and sorted **nearest first**, capped at 8 (`inRadius` reports how
+many were in range, so the widget can say "8 of 13 nearest shown"). An out-of-range center or a
+too-small radius returns an empty set with a hint instead of failing:
+
+> Nothing found — widen the radius, drop the type filter, or use coordinates near NYC (e.g. 40.7359, -73.9911).
 
 ---
 

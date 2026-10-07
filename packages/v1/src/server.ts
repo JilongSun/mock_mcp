@@ -185,28 +185,67 @@ server.tool(
 );
 
 // ─── 5. get-location-info (with map widget) ──────────────────────────
+// Every mock POI sits in NYC, so the defaults below drop a first-time caller straight into a
+// populated result set instead of an empty map.
+const DEFAULT_CENTER = { lat: 40.7359, lng: -73.9911, label: "Union Square, Manhattan" };
+
+/** Great-circle distance in kilometers. */
+function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number): number {
+  const R = 6371;
+  const toRad = (deg: number) => (deg * Math.PI) / 180;
+  const dLat = toRad(lat2 - lat1);
+  const dLng = toRad(lng2 - lng1);
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2;
+  return 2 * R * Math.asin(Math.sqrt(a));
+}
+
 server.tool(
   {
     name: "get-location-info",
-    description: "Discover nearby points of interest (POIs) around any latitude/longitude coordinate. Returns results in an interactive map widget with color-coded pins by POI type — restaurants, parks, museums, cafés, hotels, shopping, and landmarks.",
+    description: `Discover nearby points of interest (POIs) around a latitude/longitude coordinate. Returns the closest matches within \`radius\` km, drawn on an interactive map widget with color-coded pins by POI type — restaurants, parks, museums, cafés, hotels, shopping, and landmarks. All mock POIs are in New York City; the defaults (${DEFAULT_CENTER.label}) return a full map, so the tool is safe to call with no arguments.`,
     schema: z.object({
-      lat: z.number().min(-90).max(90).describe("Latitude of the center point"),
-      lng: z.number().min(-180).max(180).describe("Longitude of the center point"),
-      radius: z.number().min(0.01).max(50).optional().default(5).describe("Search radius in kilometers"),
-      types: z.array(z.enum(["restaurant", "park", "museum", "cafe", "hotel", "shopping", "landmark"])).optional().describe("Filter by POI types"),
+      lat: z.number().min(-90).max(90).optional().default(DEFAULT_CENTER.lat).describe(`Latitude of the search center. Default ${DEFAULT_CENTER.lat} (${DEFAULT_CENTER.label}). Mock POIs are all in NYC, so coordinates far outside it return an empty map.`),
+      lng: z.number().min(-180).max(180).optional().default(DEFAULT_CENTER.lng).describe(`Longitude of the search center. Default ${DEFAULT_CENTER.lng} (${DEFAULT_CENTER.label}).`),
+      radius: z.number().min(0.01).max(50).optional().default(5).describe("Search radius in kilometers (0.01–50). Every mock POI lies within ~6 km of the default center, so values above that all return the same set. Try 0.5 for a walkable cluster, 3 for a neighborhood."),
+      types: z.array(z.enum(["restaurant", "park", "museum", "cafe", "hotel", "shopping", "landmark"])).optional().describe('Restrict to specific POI types, e.g. ["restaurant","cafe"]. Omit to include all 7 types.'),
     }),
     annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
-    outputSchema: z.object({ centerLat: z.number(), centerLng: z.number(), radius: z.number(), locations: z.array(locationRowSchema), total: z.number() }),
+    outputSchema: z.object({ centerLat: z.number(), centerLng: z.number(), radius: z.number(), locations: z.array(locationRowSchema), total: z.number(), inRadius: z.number() }),
     widget: { name: "location-map", invoking: "Searching nearby locations...", invoked: "Location results loaded" },
   },
   async ({ lat, lng, radius, types }) => {
     await mockDelay(600, 2000);
-    let results = types && types.length > 0 ? mockLocations.filter((loc) => types.includes(loc.type)) : mockLocations;
-    const shuffled = [...results].sort(() => Math.random() - 0.5);
-    const selected = shuffled.slice(0, Math.min(shuffled.length, 8));
+
+    const inRange = mockLocations
+      .filter((loc) => !types || types.length === 0 || types.includes(loc.type))
+      .map((loc) => ({ loc, distanceKm: haversineKm(lat, lng, loc.lat, loc.lng) }))
+      .filter(({ distanceKm }) => distanceKm <= radius)
+      .sort((a, b) => a.distanceKm - b.distanceKm);
+
+    const selected = inRange.slice(0, 8).map(({ loc }) => loc);
+    const capped = inRange.length > selected.length;
+    const typeNote = types && types.length > 0 ? ` of type ${types.join("/")}` : "";
+    const emptyNote =
+      inRange.length === 0
+        ? " Nothing found — widen the radius, drop the type filter, or use coordinates near NYC (e.g. 40.7359, -73.9911)."
+        : "";
+
     return widget({
-      props: { centerLat: lat, centerLng: lng, radius, locations: selected as MockLocation[], total: selected.length },
-      output: text(`Found ${selected.length} location(s) near (${lat.toFixed(4)}, ${lng.toFixed(4)}) within ${radius}km`),
+      props: {
+        centerLat: lat,
+        centerLng: lng,
+        radius,
+        locations: selected as MockLocation[],
+        total: selected.length,
+        inRadius: inRange.length,
+      },
+      output: text(
+        `Found ${selected.length}${capped ? ` of ${inRange.length}` : ""} location(s)${typeNote} near (${lat.toFixed(4)}, ${lng.toFixed(4)}) within ${radius}km${
+          capped ? ", nearest first" : ""
+        }.${emptyNote}`
+      ),
     });
   }
 );
@@ -663,7 +702,7 @@ server.resource(
 | \`get-product-details\` | Get product by ID | ❌ |
 | \`list-orders\` | Paginated order listing | ✅ order-list |
 | \`create-document\` | Simulate document creation | ❌ |
-| \`get-location-info\` | Find nearby POIs | ✅ location-map |
+| \`get-location-info\` | Find nearby POIs (all params optional; defaults to Union Square, NYC) | ✅ location-map |
 | \`generate-report\` | Generate mock analytics report | ❌ |
 | \`search-knowledge\` | Search knowledge base | ❌ |
 | \`get-server-status\` | Server health & metrics | ❌ |
@@ -705,7 +744,7 @@ server.prompt(
   { name: "explore-locations", description: "Generate a prompt for exploring nearby points of interest around a location", schema: z.object({ area: z.string().describe('Area name (e.g., "Downtown Manhattan")'), interests: z.enum(["food", "culture", "nature", "shopping", "all"]).optional().default("all").describe("Type of places to look for") }) },
   async ({ area, interests }) => {
     const m: Record<string, string> = { food: "restaurants and cafés", culture: "museums and landmarks", nature: "parks and outdoor spaces", shopping: "shopping districts", all: "restaurants, parks, museums, cafés, hotels, shopping, and landmarks" };
-    return text(`Explore points of interest around ${area}.\n\nFocus on: ${m[interests]}\n\nUse the **get-location-info** tool to search for nearby locations. The tool returns a visual map widget showing colored pins:\n- 🔴 Red: Restaurants\n- 🟢 Green: Parks\n- 🟣 Purple: Museums\n- 🟡 Yellow: Cafés\n- 🔵 Blue: Hotels\n- 🩷 Pink: Shopping\n- 🟠 Orange: Landmarks\n\nFilter by types and adjust the search radius (in km).`);
+    return text(`Explore points of interest around ${area}.\n\nFocus on: ${m[interests]}\n\nUse the **get-location-info** tool to search for nearby locations. The tool returns a visual map widget showing colored pins:\n- 🔴 Red: Restaurants\n- 🟢 Green: Parks\n- 🟣 Purple: Museums\n- 🟡 Yellow: Cafés\n- 🔵 Blue: Hotels\n- 🩷 Pink: Shopping\n- 🟠 Orange: Landmarks\n\nAll parameters are optional: \`lat\`/\`lng\` default to Union Square, Manhattan (40.7359, -73.9911) and \`radius\` to 5 km, so you can run it as-is. All mock POIs are in NYC. Narrow the radius (0.5 for a walkable cluster, 3 for a neighborhood) and filter by \`types\` to focus the map; results come back nearest-first.`);
   }
 );
 

@@ -20,6 +20,7 @@ const propsSchema = z.object({
   radius: z.number(),
   locations: z.array(locationSchema),
   total: z.number(),
+  inRadius: z.number(),
 });
 
 export const widgetMetadata: WidgetMetadata = {
@@ -84,8 +85,9 @@ export default function LocationMap() {
     );
   }
 
-  const { centerLat, centerLng, radius, locations, total } = props;
+  const { centerLat, centerLng, radius, locations, total, inRadius } = props;
   const isDark = theme === "dark";
+  const capped = typeof inRadius === "number" && inRadius > total;
 
   return (
     <McpUseProvider autoSize>
@@ -96,7 +98,8 @@ export default function LocationMap() {
             📍 Nearby Locations
           </h2>
           <p className="text-sm text-gray-500 dark:text-gray-400">
-            Around ({centerLat.toFixed(4)}, {centerLng.toFixed(4)}) · {radius}km radius · {total} found
+            Around ({centerLat.toFixed(4)}, {centerLng.toFixed(4)}) · {radius}km radius ·{" "}
+            {capped ? `${total} of ${inRadius} nearest shown` : `${total} found`}
           </p>
         </div>
 
@@ -115,6 +118,29 @@ export default function LocationMap() {
             >
               {/* Grid container with aspect ratio */}
               <div style={{ aspectRatio: `${GRID_COLS}/${GRID_ROWS}`, position: "relative" }}>
+                {/* Empty state — reachable once radius actually filters */}
+                {locations.length === 0 && (
+                  <div
+                    style={{
+                      position: "absolute",
+                      inset: 0,
+                      display: "flex",
+                      flexDirection: "column",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      gap: 4,
+                      zIndex: 20,
+                    }}
+                  >
+                    <span style={{ fontSize: 28 }}>🗺️</span>
+                    <p className="text-sm text-gray-500 dark:text-gray-400" style={{ margin: 0 }}>
+                      No POIs within {radius}km of this point
+                    </p>
+                    <p className="text-xs text-gray-400 dark:text-gray-500" style={{ margin: 0 }}>
+                      Widen the radius or drop the type filter
+                    </p>
+                  </div>
+                )}
                 {/* Center crosshair */}
                 {(() => {
                   const center = toGridPosition(centerLat, centerLng, centerLat, centerLng);
