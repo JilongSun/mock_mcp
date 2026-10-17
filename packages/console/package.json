@@ -1,0 +1,33 @@
+{
+  "name": "@mock-mcp/console",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Worker console: start, stop and supervise mock-mcp workers from a light web UI",
+  "license": "MIT",
+  "scripts": {
+    "prebuild": "pnpm --filter @mock-mcp/supervisor build",
+    "build": "vite build",
+    "predev": "pnpm --filter @mock-mcp/supervisor build",
+    "start": "tsx server.ts",
+    "dev": "tsx server.ts --dev",
+    "typecheck": "tsc --noEmit",
+    "postinstall": "pnpm --filter @mock-mcp/supervisor build"
+  },
+  "dependencies": {
+    "@mock-mcp/supervisor": "workspace:*",
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.3.3",
+    "@types/node": "^25.3.0",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^6.0.5",
+    "tailwindcss": "^4.2.0",
+    "tsx": "^4.21.0",
+    "typescript": "^5.9.3",
+    "vite": "^8.2.1"
+  }
+}

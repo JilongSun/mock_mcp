@@ -11,6 +11,46 @@ importers:
 
   .: {}
 
+  packages/console:
+    dependencies:
+      '@mock-mcp/supervisor':
+        specifier: workspace:*
+        version: link:../supervisor
+      react:
+        specifier: ^19.2.4
+        version: 19.2.8
+      react-dom:
+        specifier: ^19.2.4
+        version: 19.2.8(react@19.2.8)
+    devDependencies:
+      '@tailwindcss/vite':
+        specifier: ^4.3.3
+        version: 4.3.3(vite@8.2.1(@types/node@25.9.5)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.23.10))
+      '@types/node':
+        specifier: ^25.3.0
+        version: 25.9.5
+      '@types/react':
+        specifier: ^19.2.14
+        version: 19.2.18
+      '@types/react-dom':
+        specifier: ^19.2.3
+        version: 19.2.4(@types/react@19.2.18)
+      '@vitejs/plugin-react':
+        specifier: ^6.0.5
+        version: 6.0.5(vite@8.2.1(@types/node@25.9.5)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.23.10))
+      tailwindcss:
+        specifier: ^4.2.0
+        version: 4.3.3
+      tsx:
+        specifier: ^4.21.0
+        version: 4.23.10
+      typescript:
+        specifier: ^5.9.3
+        version: 5.9.3
+      vite:
+        specifier: ^8.2.1
+        version: 8.2.1(@types/node@25.9.5)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.23.10)
+
   packages/shared:
     dependencies:
       zod:
@@ -24,17 +64,29 @@ importers:
         specifier: ^5.9.3
         version: 5.9.3
 
+  packages/supervisor:
+    devDependencies:
+      '@types/node':
+        specifier: ^25.3.0
+        version: 25.9.5
+      typescript:
+        specifier: ^5.9.3
+        version: 5.9.3
+
   packages/v1:
     dependencies:
       '@mock-mcp/shared':
         specifier: workspace:*
         version: link:../shared
+      '@mock-mcp/supervisor':
+        specifier: workspace:*
+        version: link:../supervisor
       '@modelcontextprotocol/sdk':
         specifier: ^1.26.0
-        version: 1.30.0(zod@4.3.5)
+        version: 1.30.0(supports-color@7.2.0)(zod@4.3.5)
       '@openai/apps-sdk-ui':
         specifier: ^0.2.1
-        version: 0.2.2(@types/react-dom@19.2.4(@types/react@19.2.18))(@types/react@19.2.18)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(tailwindcss@4.3.3)
+        version: 0.2.2(@types/react-dom@19.2.4(@types/react@19.2.18))(@types/react@19.2.18)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(supports-color@7.2.0)(tailwindcss@4.3.3)
       '@tailwindcss/vite':
         specifier: ^4.3.3
         version: 4.3.3(vite@8.2.1(@types/node@25.9.5)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.23.10))
@@ -43,7 +95,7 @@ importers:
         version: 6.0.5(vite@8.2.1(@types/node@25.9.5)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.23.10))
       mcp-use:
         specifier: 1.32.1
-        version: 1.32.1(@types/node@25.9.5)(@types/react-dom@19.2.4(@types/react@19.2.18))(@types/react@19.2.18)(jiti@2.7.0)(react-dom@19.2.8(react@19.2.8))(react-router-dom@7.18.2(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(react-router@7.18.2(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(react@19.2.8)(vite@8.2.1(@types/node@25.9.5)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.23.10))(zod@4.3.5)
+        version: 1.32.1(@types/node@25.9.5)(@types/react-dom@19.2.4(@types/react@19.2.18))(@types/react@19.2.18)(react-dom@19.2.8(react@19.2.8))(react-router@7.18.2(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(react@19.2.8)(supports-color@7.2.0)(vite@8.2.1(@types/node@25.9.5)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.23.10))(zod@4.3.5)
       react:
         specifier: ^19.2.4
         version: 19.2.8
@@ -2744,13 +2796,6 @@ packages:
       react: ^18.0.0 || ^19.0.0
       react-dom: ^18.0.0 || ^19.0.0
 
-  react-router-dom@7.18.2:
-    resolution: {integrity: sha512-AIKJ/jgGlFb3EbfCXk5Gzshiwt+l3mqbCrNjmEWMMjqQxNJ3svBa6bgzFyCC2Sw3RA0VWF1kg3uQf2OFhxb8hw==}
-    engines: {node: '>=20.0.0'}
-    peerDependencies:
-      react: '>=18'
-      react-dom: '>=18'
-
   react-router@7.18.2:
     resolution: {integrity: sha512-aUVMjFm3GAPTTZL7oYr5E7ETiqfQCHRLH+B+5afnICvf0r7kkK4eR6SMuwbSTJw/7t+12khT/Kahij49fqOCIg==}
     engines: {node: '>=20.0.0'}
@@ -3296,10 +3341,10 @@ snapshots:
       '@jridgewell/resolve-uri': 3.1.2
       '@jridgewell/sourcemap-codec': 1.5.5
 
-  '@mcp-ui/server@6.1.0(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(zod@4.3.5)':
+  '@mcp-ui/server@6.1.0(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(supports-color@7.2.0)(zod@4.3.5)':
     dependencies:
-      '@modelcontextprotocol/ext-apps': 0.3.1(@modelcontextprotocol/sdk@1.30.0(zod@4.3.5))(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(zod@4.3.5)
-      '@modelcontextprotocol/sdk': 1.30.0(zod@4.3.5)
+      '@modelcontextprotocol/ext-apps': 0.3.1(@modelcontextprotocol/sdk@1.30.0(supports-color@7.2.0)(zod@4.3.5))(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(zod@4.3.5)
+      '@modelcontextprotocol/sdk': 1.30.0(supports-color@7.2.0)(zod@4.3.5)
     transitivePeerDependencies:
       - '@cfworker/json-schema'
       - react
@@ -3307,9 +3352,9 @@ snapshots:
       - supports-color
       - zod
 
-  '@mcp-use/cli@3.5.2(@types/node@25.9.5)(@types/react-dom@19.2.4(@types/react@19.2.18))(@types/react@19.2.18)(express@5.2.1)(jiti@2.7.0)(react-dom@19.2.8(react@19.2.8))(react-router-dom@7.18.2(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(react-router@7.18.2(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(react@19.2.8)':
+  '@mcp-use/cli@3.5.2(@types/node@25.9.5)(@types/react-dom@19.2.4(@types/react@19.2.18))(@types/react@19.2.18)(express@5.2.1(supports-color@7.2.0))(jiti@2.7.0)(react-dom@19.2.8(react@19.2.8))(react-router@7.18.2(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(react@19.2.8)(supports-color@7.2.0)':
     dependencies:
-      '@mcp-use/inspector': 10.0.1(@types/react-dom@19.2.4(@types/react@19.2.18))(@types/react@19.2.18)(express@5.2.1)(mcp-use@1.32.1(@types/node@25.9.5)(@types/react-dom@19.2.4(@types/react@19.2.18))(@types/react@19.2.18)(jiti@2.7.0)(react-dom@19.2.8(react@19.2.8))(react-router-dom@7.18.2(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(react-router@7.18.2(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(react@19.2.8)(vite@8.2.1(@types/node@25.9.5)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.23.10))(zod@4.3.5))(react-dom@19.2.8(react@19.2.8))(react-router@7.18.2(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(react@19.2.8)(vite@8.2.1(@types/node@25.9.5)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.23.10))
+      '@mcp-use/inspector': 10.0.1(@types/react-dom@19.2.4(@types/react@19.2.18))(@types/react@19.2.18)(express@5.2.1(supports-color@7.2.0))(mcp-use@1.32.1(@types/node@25.9.5)(@types/react-dom@19.2.4(@types/react@19.2.18))(@types/react@19.2.18)(react-dom@19.2.8(react@19.2.8))(react-router@7.18.2(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(react@19.2.8)(supports-color@7.2.0)(vite@8.2.1(@types/node@25.9.5)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.23.10))(zod@4.3.5))(react-dom@19.2.8(react@19.2.8))(react-router@7.18.2(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(react@19.2.8)(supports-color@7.2.0)(vite@8.2.1(@types/node@25.9.5)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.23.10))
       '@tailwindcss/vite': 4.3.3(vite@8.2.1(@types/node@25.9.5)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.23.10))
       '@vitejs/plugin-react': 6.0.5(vite@8.2.1(@types/node@25.9.5)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.23.10))
       chalk: 5.6.2
@@ -3317,11 +3362,10 @@ snapshots:
       commander: 14.0.3
       dotenv: 17.4.2
       esbuild: 0.28.1
-      mcp-use: 1.32.1(@types/node@25.9.5)(@types/react-dom@19.2.4(@types/react@19.2.18))(@types/react@19.2.18)(jiti@2.7.0)(react-dom@19.2.8(react@19.2.8))(react-router-dom@7.18.2(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(react-router@7.18.2(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(react@19.2.8)(vite@8.2.1(@types/node@25.9.5)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.23.10))(zod@4.3.5)
+      mcp-use: 1.32.1(@types/node@25.9.5)(@types/react-dom@19.2.4(@types/react@19.2.18))(@types/react@19.2.18)(react-dom@19.2.8(react@19.2.8))(react-router@7.18.2(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(react@19.2.8)(supports-color@7.2.0)(vite@8.2.1(@types/node@25.9.5)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.23.10))(zod@4.3.5)
       open: 11.0.0
       react: 19.2.8
       react-dom: 19.2.8(react@19.2.8)
-      react-router-dom: 7.18.2(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
       tar: 7.5.22
       tsx: 4.23.10
       vite: 8.2.1(@types/node@25.9.5)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.23.10)
@@ -3365,11 +3409,11 @@ snapshots:
       - vue
       - yaml
 
-  '@mcp-use/inspector@10.0.1(@types/react-dom@19.2.4(@types/react@19.2.18))(@types/react@19.2.18)(express@5.2.1)(mcp-use@1.32.1(@types/node@25.9.5)(@types/react-dom@19.2.4(@types/react@19.2.18))(@types/react@19.2.18)(jiti@2.7.0)(react-dom@19.2.8(react@19.2.8))(react-router-dom@7.18.2(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(react-router@7.18.2(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(react@19.2.8)(vite@8.2.1(@types/node@25.9.5)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.23.10))(zod@4.3.5))(react-dom@19.2.8(react@19.2.8))(react-router@7.18.2(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(react@19.2.8)(vite@8.2.1(@types/node@25.9.5)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.23.10))':
+  '@mcp-use/inspector@10.0.1(@types/react-dom@19.2.4(@types/react@19.2.18))(@types/react@19.2.18)(express@5.2.1(supports-color@7.2.0))(mcp-use@1.32.1(@types/node@25.9.5)(@types/react-dom@19.2.4(@types/react@19.2.18))(@types/react@19.2.18)(react-dom@19.2.8(react@19.2.8))(react-router@7.18.2(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(react@19.2.8)(supports-color@7.2.0)(vite@8.2.1(@types/node@25.9.5)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.23.10))(zod@4.3.5))(react-dom@19.2.8(react@19.2.8))(react-router@7.18.2(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(react@19.2.8)(supports-color@7.2.0)(vite@8.2.1(@types/node@25.9.5)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.23.10))':
     dependencies:
       '@hono/node-server': 1.19.13(hono@4.12.23)
-      '@modelcontextprotocol/ext-apps': 1.0.1(@modelcontextprotocol/sdk@1.30.0(zod@4.3.5))(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(zod@4.3.5)
-      '@modelcontextprotocol/sdk': 1.30.0(zod@4.3.5)
+      '@modelcontextprotocol/ext-apps': 1.0.1(@modelcontextprotocol/sdk@1.30.0(supports-color@7.2.0)(zod@4.3.5))(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(zod@4.3.5)
+      '@modelcontextprotocol/sdk': 1.30.0(supports-color@7.2.0)(zod@4.3.5)
       '@paper-design/shaders-react': 0.0.72(@types/react@19.2.18)(react@19.2.8)
       '@radix-ui/react-alert-dialog': 1.1.23(@types/react-dom@19.2.4(@types/react@19.2.18))(@types/react@19.2.18)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
       '@radix-ui/react-avatar': 1.2.6(@types/react-dom@19.2.4(@types/react@19.2.18))(@types/react@19.2.18)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
@@ -3390,7 +3434,7 @@ snapshots:
       hono: 4.12.23
       lucide-react: 0.562.0(react@19.2.8)
       markdown-to-jsx: 9.10.2(react@19.2.8)
-      mcp-use: 1.32.1(@types/node@25.9.5)(@types/react-dom@19.2.4(@types/react@19.2.18))(@types/react@19.2.18)(jiti@2.7.0)(react-dom@19.2.8(react@19.2.8))(react-router-dom@7.18.2(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(react-router@7.18.2(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(react@19.2.8)(vite@8.2.1(@types/node@25.9.5)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.23.10))(zod@4.3.5)
+      mcp-use: 1.32.1(@types/node@25.9.5)(@types/react-dom@19.2.4(@types/react@19.2.18))(@types/react@19.2.18)(react-dom@19.2.8(react@19.2.8))(react-router@7.18.2(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(react@19.2.8)(supports-color@7.2.0)(vite@8.2.1(@types/node@25.9.5)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.23.10))(zod@4.3.5)
       motion: 12.43.0(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
       next-themes: 0.4.6(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
       open: 11.0.0
@@ -3404,7 +3448,7 @@ snapshots:
       tailwind-merge: 3.6.0
       zod: 4.3.5
     optionalDependencies:
-      express: 5.2.1
+      express: 5.2.1(supports-color@7.2.0)
     transitivePeerDependencies:
       - '@cfworker/json-schema'
       - '@emotion/is-prop-valid'
@@ -3416,9 +3460,9 @@ snapshots:
       - vite
       - vue
 
-  '@modelcontextprotocol/ext-apps@0.3.1(@modelcontextprotocol/sdk@1.30.0(zod@4.3.5))(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(zod@4.3.5)':
+  '@modelcontextprotocol/ext-apps@0.3.1(@modelcontextprotocol/sdk@1.30.0(supports-color@7.2.0)(zod@4.3.5))(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(zod@4.3.5)':
     dependencies:
-      '@modelcontextprotocol/sdk': 1.30.0(zod@4.3.5)
+      '@modelcontextprotocol/sdk': 1.30.0(supports-color@7.2.0)(zod@4.3.5)
       zod: 4.3.5
     optionalDependencies:
       '@oven/bun-darwin-aarch64': 1.3.14
@@ -3441,9 +3485,9 @@ snapshots:
       react: 19.2.8
       react-dom: 19.2.8(react@19.2.8)
 
-  '@modelcontextprotocol/ext-apps@1.0.1(@modelcontextprotocol/sdk@1.26.0(zod@4.3.5))(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(zod@4.3.5)':
+  '@modelcontextprotocol/ext-apps@1.0.1(@modelcontextprotocol/sdk@1.26.0(supports-color@7.2.0)(zod@4.3.5))(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(zod@4.3.5)':
     dependencies:
-      '@modelcontextprotocol/sdk': 1.26.0(zod@4.3.5)
+      '@modelcontextprotocol/sdk': 1.26.0(supports-color@7.2.0)(zod@4.3.5)
       zod: 4.3.5
     optionalDependencies:
       '@oven/bun-darwin-aarch64': 1.3.14
@@ -3466,9 +3510,9 @@ snapshots:
       react: 19.2.8
       react-dom: 19.2.8(react@19.2.8)
 
-  '@modelcontextprotocol/ext-apps@1.0.1(@modelcontextprotocol/sdk@1.30.0(zod@4.3.5))(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(zod@4.3.5)':
+  '@modelcontextprotocol/ext-apps@1.0.1(@modelcontextprotocol/sdk@1.30.0(supports-color@7.2.0)(zod@4.3.5))(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(zod@4.3.5)':
     dependencies:
-      '@modelcontextprotocol/sdk': 1.30.0(zod@4.3.5)
+      '@modelcontextprotocol/sdk': 1.30.0(supports-color@7.2.0)(zod@4.3.5)
       zod: 4.3.5
     optionalDependencies:
       '@oven/bun-darwin-aarch64': 1.3.14
@@ -3491,7 +3535,7 @@ snapshots:
       react: 19.2.8
       react-dom: 19.2.8(react@19.2.8)
 
-  '@modelcontextprotocol/sdk@1.26.0(zod@4.3.5)':
+  '@modelcontextprotocol/sdk@1.26.0(supports-color@7.2.0)(zod@4.3.5)':
     dependencies:
       '@hono/node-server': 1.19.13(hono@4.12.23)
       ajv: 8.20.0
@@ -3501,8 +3545,8 @@ snapshots:
       cross-spawn: 7.0.6
       eventsource: 3.0.7
       eventsource-parser: 3.1.0
-      express: 5.2.1
-      express-rate-limit: 8.6.2(express@5.2.1)
+      express: 5.2.1(supports-color@7.2.0)
+      express-rate-limit: 8.6.2(express@5.2.1(supports-color@7.2.0))(supports-color@7.2.0)
       hono: 4.12.23
       jose: 6.1.3
       json-schema-typed: 8.0.2
@@ -3513,7 +3557,7 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  '@modelcontextprotocol/sdk@1.30.0(zod@4.3.5)':
+  '@modelcontextprotocol/sdk@1.30.0(supports-color@7.2.0)(zod@4.3.5)':
     dependencies:
       '@hono/node-server': 2.1.0(hono@4.13.1)
       ajv: 8.20.0
@@ -3523,8 +3567,8 @@ snapshots:
       cross-spawn: 7.0.6
       eventsource: 3.0.7
       eventsource-parser: 3.1.0
-      express: 5.2.1
-      express-rate-limit: 8.6.2(express@5.2.1)
+      express: 5.2.1(supports-color@7.2.0)
+      express-rate-limit: 8.6.2(express@5.2.1(supports-color@7.2.0))(supports-color@7.2.0)
       hono: 4.13.1
       jose: 6.2.8
       json-schema-typed: 8.0.2
@@ -3535,21 +3579,21 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  '@openai/apps-sdk-ui@0.2.2(@types/react-dom@19.2.4(@types/react@19.2.18))(@types/react@19.2.18)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(tailwindcss@4.3.3)':
+  '@openai/apps-sdk-ui@0.2.2(@types/react-dom@19.2.4(@types/react@19.2.18))(@types/react@19.2.18)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(supports-color@7.2.0)(tailwindcss@4.3.3)':
     dependencies:
       clsx: 2.1.1
       lodash: 4.18.1
       luxon: 3.7.1
       radix-ui: 1.6.7(@types/react-dom@19.2.4(@types/react@19.2.18))(@types/react@19.2.18)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
       react: 19.2.8
-      react-markdown: 9.1.0(@types/react@19.2.18)(react@19.2.8)
+      react-markdown: 9.1.0(@types/react@19.2.18)(react@19.2.8)(supports-color@7.2.0)
       react-merge-refs: 2.1.1
       react-syntax-highlighter: 16.1.1(react@19.2.8)
       rehype-katex: 7.0.1
       remark-breaks: 4.0.0
-      remark-directive: 3.0.1
-      remark-gfm: 4.0.1
-      remark-math: 6.0.0
+      remark-directive: 3.0.1(supports-color@7.2.0)
+      remark-gfm: 4.0.1(supports-color@7.2.0)
+      remark-math: 6.0.0(supports-color@7.2.0)
       tailwindcss: 4.3.3
       unist-util-visit: 5.1.0
       usehooks-ts: 3.1.1(react@19.2.8)
@@ -4700,11 +4744,11 @@ snapshots:
 
   bail@2.0.2: {}
 
-  body-parser@2.3.0:
+  body-parser@2.3.0(supports-color@7.2.0):
     dependencies:
       bytes: 3.1.2
       content-type: 2.0.0
-      debug: 4.4.3
+      debug: 4.4.3(supports-color@7.2.0)
       http-errors: 2.0.1
       iconv-lite: 0.7.3
       on-finished: 2.4.1
@@ -4838,9 +4882,11 @@ snapshots:
 
   csstype@3.2.3: {}
 
-  debug@4.4.3:
+  debug@4.4.3(supports-color@7.2.0):
     dependencies:
       ms: 2.1.3
+    optionalDependencies:
+      supports-color: 7.2.0
 
   decode-named-character-reference@1.3.0:
     dependencies:
@@ -4949,28 +4995,28 @@ snapshots:
     dependencies:
       eventsource-parser: 3.1.0
 
-  express-rate-limit@8.6.2(express@5.2.1):
+  express-rate-limit@8.6.2(express@5.2.1(supports-color@7.2.0))(supports-color@7.2.0):
     dependencies:
-      debug: 4.4.3
-      express: 5.2.1
+      debug: 4.4.3(supports-color@7.2.0)
+      express: 5.2.1(supports-color@7.2.0)
       ip-address: 10.4.0
     transitivePeerDependencies:
       - supports-color
 
-  express@5.2.1:
+  express@5.2.1(supports-color@7.2.0):
     dependencies:
       accepts: 2.0.0
-      body-parser: 2.3.0
+      body-parser: 2.3.0(supports-color@7.2.0)
       content-disposition: 1.1.0
       content-type: 1.0.5
       cookie: 0.7.2
       cookie-signature: 1.2.2
-      debug: 4.4.3
+      debug: 4.4.3(supports-color@7.2.0)
       depd: 2.0.0
       encodeurl: 2.0.0
       escape-html: 1.0.3
       etag: 1.8.1
-      finalhandler: 2.1.1
+      finalhandler: 2.1.1(supports-color@7.2.0)
       fresh: 2.0.0
       http-errors: 2.0.1
       merge-descriptors: 2.0.0
@@ -4981,9 +5027,9 @@ snapshots:
       proxy-addr: 2.0.7
       qs: 6.15.3
       range-parser: 1.3.0
-      router: 2.2.0
-      send: 1.2.1
-      serve-static: 2.2.1
+      router: 2.2.0(supports-color@7.2.0)
+      send: 1.2.1(supports-color@7.2.0)
+      serve-static: 2.2.1(supports-color@7.2.0)
       statuses: 2.0.2
       type-is: 2.1.0
       vary: 1.1.2
@@ -5010,9 +5056,9 @@ snapshots:
     dependencies:
       to-regex-range: 5.0.1
 
-  finalhandler@2.1.1:
+  finalhandler@2.1.1(supports-color@7.2.0):
     dependencies:
-      debug: 4.4.3
+      debug: 4.4.3(supports-color@7.2.0)
       encodeurl: 2.0.0
       escape-html: 1.0.3
       on-finished: 2.4.1
@@ -5119,7 +5165,7 @@ snapshots:
     dependencies:
       '@types/hast': 3.0.5
 
-  hast-util-to-jsx-runtime@2.3.6:
+  hast-util-to-jsx-runtime@2.3.6(supports-color@7.2.0):
     dependencies:
       '@types/estree': 1.0.9
       '@types/hast': 3.0.5
@@ -5128,9 +5174,9 @@ snapshots:
       devlop: 1.1.0
       estree-util-is-identifier-name: 3.0.0
       hast-util-whitespace: 3.0.0
-      mdast-util-mdx-expression: 2.0.1
-      mdast-util-mdx-jsx: 3.2.0
-      mdast-util-mdxjs-esm: 2.0.1
+      mdast-util-mdx-expression: 2.0.1(supports-color@7.2.0)
+      mdast-util-mdx-jsx: 3.2.0(supports-color@7.2.0)
+      mdast-util-mdxjs-esm: 2.0.1(supports-color@7.2.0)
       property-information: 7.2.0
       space-separated-tokens: 2.0.2
       style-to-js: 1.1.21
@@ -5365,16 +5411,16 @@ snapshots:
 
   math-intrinsics@1.1.0: {}
 
-  mcp-use@1.32.1(@types/node@25.9.5)(@types/react-dom@19.2.4(@types/react@19.2.18))(@types/react@19.2.18)(jiti@2.7.0)(react-dom@19.2.8(react@19.2.8))(react-router-dom@7.18.2(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(react-router@7.18.2(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(react@19.2.8)(vite@8.2.1(@types/node@25.9.5)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.23.10))(zod@4.3.5):
+  mcp-use@1.32.1(@types/node@25.9.5)(@types/react-dom@19.2.4(@types/react@19.2.18))(@types/react@19.2.18)(react-dom@19.2.8(react@19.2.8))(react-router@7.18.2(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(react@19.2.8)(supports-color@7.2.0)(vite@8.2.1(@types/node@25.9.5)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.23.10))(zod@4.3.5):
     dependencies:
       '@hono/node-server': 1.19.13(hono@4.12.23)
-      '@mcp-ui/server': 6.1.0(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(zod@4.3.5)
-      '@mcp-use/cli': 3.5.2(@types/node@25.9.5)(@types/react-dom@19.2.4(@types/react@19.2.18))(@types/react@19.2.18)(express@5.2.1)(jiti@2.7.0)(react-dom@19.2.8(react@19.2.8))(react-router-dom@7.18.2(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(react-router@7.18.2(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(react@19.2.8)
-      '@mcp-use/inspector': 10.0.1(@types/react-dom@19.2.4(@types/react@19.2.18))(@types/react@19.2.18)(express@5.2.1)(mcp-use@1.32.1(@types/node@25.9.5)(@types/react-dom@19.2.4(@types/react@19.2.18))(@types/react@19.2.18)(jiti@2.7.0)(react-dom@19.2.8(react@19.2.8))(react-router-dom@7.18.2(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(react-router@7.18.2(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(react@19.2.8)(vite@8.2.1(@types/node@25.9.5)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.23.10))(zod@4.3.5))(react-dom@19.2.8(react@19.2.8))(react-router@7.18.2(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(react@19.2.8)(vite@8.2.1(@types/node@25.9.5)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.23.10))
-      '@modelcontextprotocol/ext-apps': 1.0.1(@modelcontextprotocol/sdk@1.26.0(zod@4.3.5))(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(zod@4.3.5)
-      '@modelcontextprotocol/sdk': 1.26.0(zod@4.3.5)
+      '@mcp-ui/server': 6.1.0(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(supports-color@7.2.0)(zod@4.3.5)
+      '@mcp-use/cli': 3.5.2(@types/node@25.9.5)(@types/react-dom@19.2.4(@types/react@19.2.18))(@types/react@19.2.18)(express@5.2.1(supports-color@7.2.0))(jiti@2.7.0)(react-dom@19.2.8(react@19.2.8))(react-router@7.18.2(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(react@19.2.8)(supports-color@7.2.0)
+      '@mcp-use/inspector': 10.0.1(@types/react-dom@19.2.4(@types/react@19.2.18))(@types/react@19.2.18)(express@5.2.1(supports-color@7.2.0))(mcp-use@1.32.1(@types/node@25.9.5)(@types/react-dom@19.2.4(@types/react@19.2.18))(@types/react@19.2.18)(react-dom@19.2.8(react@19.2.8))(react-router@7.18.2(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(react@19.2.8)(supports-color@7.2.0)(vite@8.2.1(@types/node@25.9.5)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.23.10))(zod@4.3.5))(react-dom@19.2.8(react@19.2.8))(react-router@7.18.2(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(react@19.2.8)(supports-color@7.2.0)(vite@8.2.1(@types/node@25.9.5)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.23.10))
+      '@modelcontextprotocol/ext-apps': 1.0.1(@modelcontextprotocol/sdk@1.26.0(supports-color@7.2.0)(zod@4.3.5))(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(zod@4.3.5)
+      '@modelcontextprotocol/sdk': 1.26.0(supports-color@7.2.0)(zod@4.3.5)
       chalk: 4.1.2
-      express: 5.2.1
+      express: 5.2.1(supports-color@7.2.0)
       hono: 4.12.23
       jose: 6.1.3
       node-mocks-http: 1.17.2(@types/node@25.9.5)
@@ -5389,40 +5435,25 @@ snapshots:
     transitivePeerDependencies:
       - '@cfworker/json-schema'
       - '@emotion/is-prop-valid'
-      - '@rolldown/plugin-babel'
       - '@types/express'
       - '@types/node'
       - '@types/react'
       - '@types/react-dom'
-      - '@vitejs/devtools'
-      - babel-plugin-react-compiler
-      - bufferutil
-      - jiti
-      - less
       - preact-render-to-string
       - react-dom
       - react-native
-      - react-router-dom
-      - rollup
-      - sass
-      - sass-embedded
       - solid-js
-      - stylus
-      - sugarss
       - supports-color
-      - terser
-      - utf-8-validate
       - vite
       - vue
-      - yaml
 
-  mdast-util-directive@3.1.0:
+  mdast-util-directive@3.1.0(supports-color@7.2.0):
     dependencies:
       '@types/mdast': 4.0.4
       '@types/unist': 3.0.3
       ccount: 2.0.1
       devlop: 1.1.0
-      mdast-util-from-markdown: 2.0.3
+      mdast-util-from-markdown: 2.0.3(supports-color@7.2.0)
       mdast-util-to-markdown: 2.1.2
       parse-entities: 4.0.2
       stringify-entities: 4.0.4
@@ -5437,14 +5468,14 @@ snapshots:
       unist-util-is: 6.0.1
       unist-util-visit-parents: 6.0.2
 
-  mdast-util-from-markdown@2.0.3:
+  mdast-util-from-markdown@2.0.3(supports-color@7.2.0):
     dependencies:
       '@types/mdast': 4.0.4
       '@types/unist': 3.0.3
       decode-named-character-reference: 1.3.0
       devlop: 1.1.0
       mdast-util-to-string: 4.0.0
-      micromark: 4.0.2
+      micromark: 4.0.2(supports-color@7.2.0)
       micromark-util-decode-numeric-character-reference: 2.0.2
       micromark-util-decode-string: 2.0.1
       micromark-util-normalize-identifier: 2.0.1
@@ -5462,79 +5493,79 @@ snapshots:
       mdast-util-find-and-replace: 3.0.2
       micromark-util-character: 2.1.1
 
-  mdast-util-gfm-footnote@2.1.0:
+  mdast-util-gfm-footnote@2.1.0(supports-color@7.2.0):
     dependencies:
       '@types/mdast': 4.0.4
       devlop: 1.1.0
-      mdast-util-from-markdown: 2.0.3
+      mdast-util-from-markdown: 2.0.3(supports-color@7.2.0)
       mdast-util-to-markdown: 2.1.2
       micromark-util-normalize-identifier: 2.0.1
     transitivePeerDependencies:
       - supports-color
 
-  mdast-util-gfm-strikethrough@2.0.0:
+  mdast-util-gfm-strikethrough@2.0.0(supports-color@7.2.0):
     dependencies:
       '@types/mdast': 4.0.4
-      mdast-util-from-markdown: 2.0.3
+      mdast-util-from-markdown: 2.0.3(supports-color@7.2.0)
       mdast-util-to-markdown: 2.1.2
     transitivePeerDependencies:
       - supports-color
 
-  mdast-util-gfm-table@2.0.0:
+  mdast-util-gfm-table@2.0.0(supports-color@7.2.0):
     dependencies:
       '@types/mdast': 4.0.4
       devlop: 1.1.0
       markdown-table: 3.0.4
-      mdast-util-from-markdown: 2.0.3
+      mdast-util-from-markdown: 2.0.3(supports-color@7.2.0)
       mdast-util-to-markdown: 2.1.2
     transitivePeerDependencies:
       - supports-color
 
-  mdast-util-gfm-task-list-item@2.0.0:
+  mdast-util-gfm-task-list-item@2.0.0(supports-color@7.2.0):
     dependencies:
       '@types/mdast': 4.0.4
       devlop: 1.1.0
-      mdast-util-from-markdown: 2.0.3
+      mdast-util-from-markdown: 2.0.3(supports-color@7.2.0)
       mdast-util-to-markdown: 2.1.2
     transitivePeerDependencies:
       - supports-color
 
-  mdast-util-gfm@3.1.0:
+  mdast-util-gfm@3.1.0(supports-color@7.2.0):
     dependencies:
-      mdast-util-from-markdown: 2.0.3
+      mdast-util-from-markdown: 2.0.3(supports-color@7.2.0)
       mdast-util-gfm-autolink-literal: 2.0.1
-      mdast-util-gfm-footnote: 2.1.0
-      mdast-util-gfm-strikethrough: 2.0.0
-      mdast-util-gfm-table: 2.0.0
-      mdast-util-gfm-task-list-item: 2.0.0
+      mdast-util-gfm-footnote: 2.1.0(supports-color@7.2.0)
+      mdast-util-gfm-strikethrough: 2.0.0(supports-color@7.2.0)
+      mdast-util-gfm-table: 2.0.0(supports-color@7.2.0)
+      mdast-util-gfm-task-list-item: 2.0.0(supports-color@7.2.0)
       mdast-util-to-markdown: 2.1.2
     transitivePeerDependencies:
       - supports-color
 
-  mdast-util-math@3.0.0:
+  mdast-util-math@3.0.0(supports-color@7.2.0):
     dependencies:
       '@types/hast': 3.0.5
       '@types/mdast': 4.0.4
       devlop: 1.1.0
       longest-streak: 3.1.0
-      mdast-util-from-markdown: 2.0.3
+      mdast-util-from-markdown: 2.0.3(supports-color@7.2.0)
       mdast-util-to-markdown: 2.1.2
       unist-util-remove-position: 5.0.0
     transitivePeerDependencies:
       - supports-color
 
-  mdast-util-mdx-expression@2.0.1:
+  mdast-util-mdx-expression@2.0.1(supports-color@7.2.0):
     dependencies:
       '@types/estree-jsx': 1.0.5
       '@types/hast': 3.0.5
       '@types/mdast': 4.0.4
       devlop: 1.1.0
-      mdast-util-from-markdown: 2.0.3
+      mdast-util-from-markdown: 2.0.3(supports-color@7.2.0)
       mdast-util-to-markdown: 2.1.2
     transitivePeerDependencies:
       - supports-color
 
-  mdast-util-mdx-jsx@3.2.0:
+  mdast-util-mdx-jsx@3.2.0(supports-color@7.2.0):
     dependencies:
       '@types/estree-jsx': 1.0.5
       '@types/hast': 3.0.5
@@ -5542,7 +5573,7 @@ snapshots:
       '@types/unist': 3.0.3
       ccount: 2.0.1
       devlop: 1.1.0
-      mdast-util-from-markdown: 2.0.3
+      mdast-util-from-markdown: 2.0.3(supports-color@7.2.0)
       mdast-util-to-markdown: 2.1.2
       parse-entities: 4.0.2
       stringify-entities: 4.0.4
@@ -5551,13 +5582,13 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  mdast-util-mdxjs-esm@2.0.1:
+  mdast-util-mdxjs-esm@2.0.1(supports-color@7.2.0):
     dependencies:
       '@types/estree-jsx': 1.0.5
       '@types/hast': 3.0.5
       '@types/mdast': 4.0.4
       devlop: 1.1.0
-      mdast-util-from-markdown: 2.0.3
+      mdast-util-from-markdown: 2.0.3(supports-color@7.2.0)
       mdast-util-to-markdown: 2.1.2
     transitivePeerDependencies:
       - supports-color
@@ -5799,10 +5830,10 @@ snapshots:
 
   micromark-util-types@2.0.2: {}
 
-  micromark@4.0.2:
+  micromark@4.0.2(supports-color@7.2.0):
     dependencies:
       '@types/debug': 4.1.13
-      debug: 4.4.3
+      debug: 4.4.3(supports-color@7.2.0)
       decode-named-character-reference: 1.3.0
       devlop: 1.1.0
       micromark-core-commonmark: 2.0.3
@@ -6094,17 +6125,17 @@ snapshots:
       react: 19.2.8
       scheduler: 0.27.0
 
-  react-markdown@9.1.0(@types/react@19.2.18)(react@19.2.8):
+  react-markdown@9.1.0(@types/react@19.2.18)(react@19.2.8)(supports-color@7.2.0):
     dependencies:
       '@types/hast': 3.0.5
       '@types/mdast': 4.0.4
       '@types/react': 19.2.18
       devlop: 1.1.0
-      hast-util-to-jsx-runtime: 2.3.6
+      hast-util-to-jsx-runtime: 2.3.6(supports-color@7.2.0)
       html-url-attributes: 3.0.1
       mdast-util-to-hast: 13.2.1
       react: 19.2.8
-      remark-parse: 11.0.0
+      remark-parse: 11.0.0(supports-color@7.2.0)
       remark-rehype: 11.1.2
       unified: 11.0.5
       unist-util-visit: 5.1.0
@@ -6137,12 +6168,6 @@ snapshots:
     dependencies:
       react: 19.2.8
       react-dom: 19.2.8(react@19.2.8)
-
-  react-router-dom@7.18.2(react-dom@19.2.8(react@19.2.8))(react@19.2.8):
-    dependencies:
-      react: 19.2.8
-      react-dom: 19.2.8(react@19.2.8)
-      react-router: 7.18.2(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
 
   react-router@7.18.2(react-dom@19.2.8(react@19.2.8))(react@19.2.8):
     dependencies:
@@ -6206,39 +6231,39 @@ snapshots:
       mdast-util-newline-to-break: 2.0.0
       unified: 11.0.5
 
-  remark-directive@3.0.1:
+  remark-directive@3.0.1(supports-color@7.2.0):
     dependencies:
       '@types/mdast': 4.0.4
-      mdast-util-directive: 3.1.0
+      mdast-util-directive: 3.1.0(supports-color@7.2.0)
       micromark-extension-directive: 3.0.2
       unified: 11.0.5
     transitivePeerDependencies:
       - supports-color
 
-  remark-gfm@4.0.1:
+  remark-gfm@4.0.1(supports-color@7.2.0):
     dependencies:
       '@types/mdast': 4.0.4
-      mdast-util-gfm: 3.1.0
+      mdast-util-gfm: 3.1.0(supports-color@7.2.0)
       micromark-extension-gfm: 3.0.0
-      remark-parse: 11.0.0
+      remark-parse: 11.0.0(supports-color@7.2.0)
       remark-stringify: 11.0.0
       unified: 11.0.5
     transitivePeerDependencies:
       - supports-color
 
-  remark-math@6.0.0:
+  remark-math@6.0.0(supports-color@7.2.0):
     dependencies:
       '@types/mdast': 4.0.4
-      mdast-util-math: 3.0.0
+      mdast-util-math: 3.0.0(supports-color@7.2.0)
       micromark-extension-math: 3.1.0
       unified: 11.0.5
     transitivePeerDependencies:
       - supports-color
 
-  remark-parse@11.0.0:
+  remark-parse@11.0.0(supports-color@7.2.0):
     dependencies:
       '@types/mdast': 4.0.4
-      mdast-util-from-markdown: 2.0.3
+      mdast-util-from-markdown: 2.0.3(supports-color@7.2.0)
       micromark-util-types: 2.0.2
       unified: 11.0.5
     transitivePeerDependencies:
@@ -6283,9 +6308,9 @@ snapshots:
       '@rolldown/binding-win32-arm64-msvc': 1.2.3
       '@rolldown/binding-win32-x64-msvc': 1.2.3
 
-  router@2.2.0:
+  router@2.2.0(supports-color@7.2.0):
     dependencies:
-      debug: 4.4.3
+      debug: 4.4.3(supports-color@7.2.0)
       depd: 2.0.0
       is-promise: 4.0.0
       parseurl: 1.3.3
@@ -6301,9 +6326,9 @@ snapshots:
 
   scheduler@0.27.0: {}
 
-  send@1.2.1:
+  send@1.2.1(supports-color@7.2.0):
     dependencies:
-      debug: 4.4.3
+      debug: 4.4.3(supports-color@7.2.0)
       encodeurl: 2.0.0
       escape-html: 1.0.3
       etag: 1.8.1
@@ -6317,12 +6342,12 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  serve-static@2.2.1:
+  serve-static@2.2.1(supports-color@7.2.0):
     dependencies:
       encodeurl: 2.0.0
       escape-html: 1.0.3
       parseurl: 1.3.3
-      send: 1.2.1
+      send: 1.2.1(supports-color@7.2.0)
     transitivePeerDependencies:
       - supports-color
 

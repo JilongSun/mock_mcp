@@ -5,11 +5,15 @@
   "scripts": {
     "dev:v1": "pnpm --filter @mock-mcp/v1 dev",
     "build:shared": "pnpm --filter @mock-mcp/shared build",
+    "build:supervisor": "pnpm --filter @mock-mcp/supervisor build",
     "build:v1": "pnpm --filter @mock-mcp/v1 build",
     "run:v1": "pnpm --filter @mock-mcp/v1 run run",
     "start:v1": "pnpm --filter @mock-mcp/v1 run start",
     "stop:v1": "pnpm --filter @mock-mcp/v1 run stop",
-    "status:v1": "pnpm --filter @mock-mcp/v1 run status"
+    "status:v1": "pnpm --filter @mock-mcp/v1 run status",
+    "console": "pnpm --filter @mock-mcp/console build && pnpm --filter @mock-mcp/console run start",
+    "console:dev": "pnpm --filter @mock-mcp/console run dev",
+    "build:console": "pnpm --filter @mock-mcp/console build"
   },
   "engines": {
     "node": ">=20"

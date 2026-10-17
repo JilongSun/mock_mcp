@@ -1,0 +1,26 @@
+{
+  "name": "@mock-mcp/supervisor",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Worker supervisor: registry, lifecycle and readiness probing for mock-mcp workers",
+  "license": "MIT",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@types/node": "^25.3.0",
+    "typescript": "^5.9.3"
+  }
+}

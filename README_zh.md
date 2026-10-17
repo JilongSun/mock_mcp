@@ -13,8 +13,10 @@
 ```
 mock_mcp/
 ├── packages/
-│   ├── shared/        # @mock-mcp/shared — mock 数据与工具函数
-│   └── v1/            # @mock-mcp/v1    — mcp-use@1.32.1 服务器
+│   ├── shared/        # @mock-mcp/shared     — mock 数据与工具函数
+│   ├── supervisor/    # @mock-mcp/supervisor — worker 注册表与生命周期
+│   ├── console/       # @mock-mcp/console    — 多 worker 管理控制台
+│   └── v1/            # @mock-mcp/v1         — mcp-use@1.32.1 服务器
 ├── public/            # 静态资源
 ├── docs/              # 工具参考、能力文档与 ADR
 └── README.md
@@ -56,32 +58,34 @@ inspector 中执行 `manage-orders`，把响应面板切到 **Component (MCP App
 # 前台 —— 日志直接输出到终端，Ctrl+C 停止
 pnpm run:v1
 
-# 后台 —— 在本地记录端口/PID，日志写入 packages/v1/.run/logs/
+# 后台 —— 在本地记录端口/PID，日志写入 .run/logs/
 pnpm start:v1
 
-# 查看与停止后台进程
+# 查看与停止后台 worker
 pnpm status:v1
-pnpm stop:v1                    # 停止全部已记录的后台 job
-pnpm stop:v1 -- --port 8760     # 只停止该端口上的 job
+pnpm stop:v1                    # 停止全部已记录的 worker
+pnpm stop:v1 -- --port 8760     # 只停止该端口上的 worker
 ```
 
-后台记录保存在 `packages/v1/.run/`（已在 `.gitignore` 中）：`processes.json` 存放端口/PID
-记录，`logs/` 每个 job 一个日志文件。
+后台记录保存在仓库根目录的 `.run/`（已在 `.gitignore` 中）：`workers.json` 存放端口/PID
+记录，`logs/` 每个 worker 一个日志文件。该注册表与
+[Worker 控制台](#worker-控制台) 共用，因此终端启动的 worker 会出现在控制台里，反之亦然。
 
 `start` 会等待服务**真正绑定端口**后才报告成功 —— 冷启动需要 ~10–20 秒，期间
 `mcp-use` 不输出任何日志，若立刻报成功会非常误导。如果 worker 退出或始终没有绑定端口，
-该 job 会被回滚（停掉并从记录中移除），`start` 以非零码退出。可用 `--timeout <秒>`
+该分组会被回滚（停掉并从注册表中移除），`start` 以非零码退出。可用 `--timeout <秒>`
 调整等待上限（默认 `45`）。
 
-`pnpm status:v1` 也会探测端口，因此能区分 `running` 与
-`alive but NOT listening (booting or hung)`。
+`pnpm status:v1` 也会探测端口，并且只有在监听端口的进程确实属于该 worker 时才认定其
+`running`，因此能区分 `running` 与 `alive but NOT listening (booting or hung)`，
+并在端口被其他进程占用时给出警告。
 
 ### 多 Worker（仅后台）
 
 多 worker 仅 `start` 支持，`run` 始终是单实例前台。
 
 加上 `--workers N`。worker 从基础端口开始递减占用连续端口（8760、8759、8758……），
-并记录为**同一个 job**，因此一条 `pnpm stop:v1` 即可全部关闭。
+并记录为**同一个分组**，因此一条 `pnpm stop:v1` 即可全部关闭。
 
 ```bash
 # 后台 —— 3 个 worker，端口 8760、8759、8758
@@ -96,8 +100,35 @@ pnpm start:v1 -- -w 5
 | `-p, --port <n>` | 基础端口（默认 `8760`） |
 | `-w, --workers <n>` | （仅 `start`）后台 worker 数量（默认 `1`） |
 | `-t, --timeout <s>` | （仅 `start`）等待就绪的秒数（默认 `45`） |
-| `-a, --all` | （`stop`）停止全部已记录 job —— 本来就是默认行为 |
+| `-a, --all` | （`stop`）停止全部已记录 worker —— 本来就是默认行为 |
 | `-h, --help` | 显示用法 |
+
+---
+
+## Worker 控制台
+
+`pnpm console` 会在 [http://127.0.0.1:8790](http://127.0.0.1:8790) 提供一个浅色 Web 控制台，
+用于统一管理所有 worker：启动、停止、重启、移除、查看状态与日志。它**是管理者而不是
+worker** —— 自身不运行任何 MCP 服务，并与 CLI 共用同一份注册表，两边始终一致。worker 以
+detached 方式启动，因此关闭控制台不会影响它们。
+
+```bash
+pnpm console        # 必要时先构建 UI，然后在 127.0.0.1:8790 提供服务
+pnpm console:dev    # Vite 开发模式（热更新），UI 在 127.0.0.1:5173，API 代理到 8790
+pnpm build:console  # 仅构建 UI
+```
+
+- **状态**由 PID 与端口归属共同判定（`running`、`starting`、`unresponsive`、`stopping`、
+  `stopped`、`exited`），每 2 秒刷新一次。归属校验缓存 20 秒、并在每次操作后立即失效，因此轮询
+  开销很低（3 个 worker 时热请求约 1.4ms、冷请求约 120ms）；没有页面打开时不产生任何轮询。
+- **不会自动重启** worker。崩溃或卡死的 worker 只会上报，重启需要手动点击。
+- 控制台只绑定回环地址。由于该 API 能启停进程，非回环 `--host` 会被拒绝，除非显式设置
+  `MOCK_MCP_CONSOLE_ALLOW_REMOTE=1`。
+- 新增 worker 默认自动分配空闲端口（从运行时默认端口向下查找）。详情面板中已经预留了
+  （尚未启用的）per-worker capability 与 MCP v1/v2 选择字段。
+
+完整 API、端口与内部实现见 [`docs/worker-console_zh.md`](./docs/worker-console_zh.md)
+（[English](./docs/worker-console.md)）。
 
 ---
 
@@ -109,8 +140,10 @@ pnpm start:v1 -- -w 5
 | `pnpm build:v1` | v1 生产构建 |
 | `pnpm run:v1` | v1 **前台**运行（端口 8760） |
 | `pnpm start:v1` | v1 **后台**运行（关闭终端后仍继续） |
-| `pnpm status:v1` | 列出已记录的后台 job |
-| `pnpm stop:v1` | 停止后台 job —— 默认全部关闭 |
+| `pnpm status:v1` | 列出已记录的后台 worker |
+| `pnpm stop:v1` | 停止后台 worker —— 默认全部关闭 |
+| `pnpm console` | 构建并启动 Worker 控制台（端口 8790） |
+| `pnpm console:dev` | 控制台 UI 的 Vite 开发模式（端口 5173） |
 
 `start:v1` 加上 `-- --workers N` 即为后台多 worker 模式。
 
@@ -156,6 +189,8 @@ pnpm start:v1 -- -w 5
 每个 workspace 包各自管理其编译产物：
 
 - `@mock-mcp/shared` 构建到 `packages/shared/dist`，并从该目录导出 JavaScript 与声明文件。
+- `@mock-mcp/supervisor` 构建到 `packages/supervisor/dist`；v1 CLI 与控制台都引入它，因此 worker 的启停与状态在终端和 UI 中行为完全一致。
+- `@mock-mcp/console` 的 UI 构建到 `packages/console/dist/ui`；服务端本身通过 `tsx` 直接运行 TypeScript。
 - `@mock-mcp/v1` 将服务器与小组件构建到 `packages/v1/dist`。
 
 保持这些产物位于各自的包内，可以确保 Node 的包导出解析正常工作。根包负责编排构建，但不会把各自独立版本化的 workspace 包扁平化输出到共享的根 `dist`。

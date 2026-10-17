@@ -22,7 +22,6 @@
   "include": [
     "index.ts",
     "cli.ts",
-    "scripts/**/*",
     "src/**/*",
     "resources/**/*",
     ".mcp-use/**/*.d.ts"
