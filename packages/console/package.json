@@ -9,8 +9,11 @@
     "prebuild": "pnpm --filter @mock-mcp/supervisor build",
     "build": "vite build",
     "predev": "pnpm --filter @mock-mcp/supervisor build",
-    "start": "tsx server.ts",
-    "dev": "tsx server.ts --dev",
+    "dev": "tsx cli.ts run --dev",
+    "run": "tsx cli.ts run",
+    "start": "tsx cli.ts start",
+    "stop": "tsx cli.ts stop",
+    "status": "tsx cli.ts status",
     "typecheck": "tsc --noEmit",
     "postinstall": "pnpm --filter @mock-mcp/supervisor build"
   },

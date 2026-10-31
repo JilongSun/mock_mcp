@@ -12,6 +12,6 @@
     "skipLibCheck": true,
     "types": ["node", "vite/client"]
   },
-  "include": ["server.ts", "vite.config.ts", "src/**/*", "ui/**/*"],
+  "include": ["cli.ts", "server.ts", "vite.config.ts", "src/**/*", "ui/**/*"],
   "exclude": ["node_modules", "dist"]
 }

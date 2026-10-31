@@ -6,10 +6,45 @@ The worker console (`@mock-mcp/console`) is a light web UI plus a small HTTP API
 every mock-mcp worker from one place: start, stop, restart, remove, watch status, tail logs.
 
 ```bash
-pnpm console        # build the UI if needed, then serve on http://127.0.0.1:8790
-pnpm console:dev    # Vite dev server with HMR on :5173 (API proxied to :8790)
-pnpm build:console  # UI build only
+pnpm console         # build the UI if needed, then serve in the BACKGROUND on :8790
+pnpm console:status  # is it still running / serving?
+pnpm console:stop    # stop the console — workers keep running
+pnpm console:run     # foreground instead (Ctrl+C stops the console)
+pnpm console:dev     # Vite dev server with HMR on :5173 (API proxied to :8790)
+pnpm build:console   # UI build only
 ```
+
+## Running in the background
+
+`pnpm console` is detached, exactly like `pnpm start:v1` for workers: closing the terminal does not
+stop it. It records its PID/port in `.run/console.json` and logs to
+`.run/logs/console-<port>.log`, so `console:status` and `console:stop` work without remembering
+anything.
+
+```bash
+pnpm console -- --port 8791        # a second console on another port
+pnpm console:stop -- --port 8791   # stop just that one
+```
+
+Starting a console on a port that is already recorded and alive fails with
+`the console is already running on ... (PID n)` rather than spawning a duplicate.
+
+## Lifecycle: control plane, not parent
+
+```
+console (detached) ──spawn──▶ worker A (detached, survives the console)
+                   ──spawn──▶ worker B (detached, survives the console)
+```
+
+- Workers are spawned `detached: true` and `unref()`-ed, and the console keeps no
+  `ChildProcess` handle — only numeric PIDs in the registry.
+- Therefore **stopping the console never stops a worker**: `pnpm console:stop`, `Ctrl+C` on a
+  foreground console, or killing the console all leave workers running and listening.
+- Stop workers with `pnpm stop:v1` or the UI's Stop/Remove buttons.
+- The reverse also holds: workers started by `pnpm start:v1` are managed by the console as soon as
+  it starts, because both read the same `.run/workers.json`.
+
+The only thing the console stops on exit is its own HTTP server (and the Vite child in `--dev`).
 
 ---
 
@@ -44,7 +79,9 @@ All supervisor state lives in the repository-root `.run/` directory (git-ignored
 | Path | Purpose |
 |------|---------|
 | `.run/workers.json` | Worker registry (schema version 2) |
+| `.run/console.json` | Background console instances (PID/port/log) |
 | `.run/logs/<worker-id>.log` | One log file per worker |
+| `.run/logs/console-<port>.log` | One log file per background console |
 
 - The file is written atomically (temp file + `rename`), so a reader never sees a partial file.
 - Worker ids are derived from the port (`w-8760`), so restarting a worker reuses its record and log.
@@ -199,4 +236,5 @@ pnpm console:dev     # Vite HMR on :5173, API proxied to :8790
 | UI | `packages/console/ui/` (React + Tailwind, zh/en toggle) |
 | Worker lifecycle | `packages/supervisor/src/lifecycle.ts` |
 
-`tsx server.ts --port 8791` runs the console on another port; `--dev` additionally starts Vite.
+`tsx cli.ts start --port 8791` runs a second console in the background on another port;
+`tsx cli.ts run --dev` runs it in the foreground with Vite.

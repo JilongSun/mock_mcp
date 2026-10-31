@@ -6,10 +6,44 @@ Worker 控制台（`@mock-mcp/console`）是一个浅色 Web 界面加一组轻�
 mock-mcp worker：启动、停止、重启、移除、查看状态、跟踪日志。
 
 ```bash
-pnpm console        # 必要时先构建 UI，然后在 http://127.0.0.1:8790 提供服务
-pnpm console:dev    # Vite 开发模式（热更新），UI 在 :5173，API 代理到 :8790
-pnpm build:console  # 仅构建 UI
+pnpm console         # 必要时先构建 UI，然后**后台**运行在 :8790
+pnpm console:status  # 是否还在运行 / 是否还在服务
+pnpm console:stop    # 停止控制台 —— worker 继续运行
+pnpm console:run     # 改为前台运行（Ctrl+C 停止控制台）
+pnpm console:dev     # Vite 开发模式（热更新），UI 在 :5173，API 代理到 :8790
+pnpm build:console   # 仅构建 UI
 ```
+
+## 后台运行
+
+`pnpm console` 与 worker 的 `pnpm start:v1` 一样是 detached 的：关闭终端不会停止它。它把
+PID/端口记录在 `.run/console.json`，日志写入 `.run/logs/console-<port>.log`，因此
+`console:status` / `console:stop` 无需记住任何东西。
+
+```bash
+pnpm console -- --port 8791        # 在另一个端口再起一个控制台
+pnpm console:stop -- --port 8791   # 只停那一个
+```
+
+如果该端口上已记录且仍存活的控制台，`start` 会直接报
+`the console is already running on ... (PID n)`，而不会重复拉起。
+
+## 生命周期：控制面，不是父进程
+
+```
+console (detached) ──spawn──▶ worker A (detached，控制台退出后继续运行)
+                   ──spawn──▶ worker B (detached，控制台退出后继续运行)
+```
+
+- worker 以 `detached: true` + `unref()` 启动，控制台不保留任何 `ChildProcess` 句柄，注册表里
+  只有数字 PID。
+- 因此**停止控制台绝不会停止 worker**：`pnpm console:stop`、前台控制台按 `Ctrl+C`、甚至直接
+  kill 掉控制台，worker 都会继续运行并监听端口。
+- 停止 worker 请用 `pnpm stop:v1` 或界面上的停止/移除按钮。
+- 反过来同样成立：`pnpm start:v1` 启动的 worker，控制台一启动就能管理，因为二者读的是同一份
+  `.run/workers.json`。
+
+控制台退出时只会关闭自己的 HTTP 服务（以及 `--dev` 模式下的 Vite 子进程）。
 
 ---
 
@@ -43,7 +77,9 @@ pnpm build:console  # 仅构建 UI
 | 路径 | 用途 |
 |------|------|
 | `.run/workers.json` | worker 注册表（schema 版本 2） |
+| `.run/console.json` | 后台控制台实例（PID/端口/日志） |
 | `.run/logs/<worker-id>.log` | 每个 worker 一个日志文件 |
+| `.run/logs/console-<port>.log` | 每个后台控制台一个日志文件 |
 
 - 文件以原子方式写入（临时文件 + `rename`），读取方不会读到半截文件。
 - worker id 由端口派生（`w-8760`），因此重启会复用同一条记录与同一个日志文件。
@@ -185,4 +221,5 @@ pnpm console:dev     # Vite 热更新在 :5173，API 代理到 :8790
 | UI | `packages/console/ui/`（React + Tailwind，中英切换） |
 | worker 生命周期 | `packages/supervisor/src/lifecycle.ts` |
 
-`tsx server.ts --port 8791` 可在其他端口运行控制台；加 `--dev` 会同时启动 Vite。
+`tsx cli.ts start --port 8791` 可在另一个端口后台再起一个控制台；
+`tsx cli.ts run --dev` 则是前台 + Vite。

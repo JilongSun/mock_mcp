@@ -12,7 +12,10 @@
     "stop:v1": "pnpm --filter @mock-mcp/v1 run stop",
     "status:v1": "pnpm --filter @mock-mcp/v1 run status",
     "console": "pnpm --filter @mock-mcp/console build && pnpm --filter @mock-mcp/console run start",
+    "console:run": "pnpm --filter @mock-mcp/console run run",
     "console:dev": "pnpm --filter @mock-mcp/console run dev",
+    "console:stop": "pnpm --filter @mock-mcp/console run stop",
+    "console:status": "pnpm --filter @mock-mcp/console run status",
     "build:console": "pnpm --filter @mock-mcp/console build"
   },
   "engines": {

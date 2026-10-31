@@ -78,6 +78,9 @@ Constraints that shaped the decision:
 
 - The registry moved from `packages/v1/.run/` to the repository-root `.run/`, so docs and
   muscle memory about that path changed (mitigated by migrating the old file automatically).
+- The console has its own detach/attach lifecycle (`console.json`), separate from the worker
+  registry. That is intentional: stopping the console must never be able to stop workers, so the two
+  lifecycles are not coupled anywhere.
 - Logs are now one file per worker instead of one per group, which changes the `Logs:` path printed
   by `start` (the format and the commands are unchanged).
 - The console spawns and kills processes with no authentication. It is therefore loopback-only by

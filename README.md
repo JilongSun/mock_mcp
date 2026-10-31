@@ -84,6 +84,11 @@ Tune the budget with `--timeout <seconds>` (default `45`).
 listening process really belongs to that worker — so it distinguishes `running` from
 `alive but NOT listening (booting or hung)` and warns when `port held by another process`.
 
+Workers bind **IPv4 loopback** (`127.0.0.1`) by default, which is what `.mcp.json` points at. Without
+that pin, `mcp-use` listens on `localhost`, and on machines where `localhost` resolves to `::1` the
+worker becomes unreachable from `http://127.0.0.1:...` clients. Override with `HOST=0.0.0.0` (or any
+address) if you know what you are doing.
+
 ### Multi-Worker (background only)
 
 Multi-worker mode is exclusive to `start`. `run` is always a single foreground instance.
@@ -112,17 +117,27 @@ pnpm start:v1 -- -w 5
 
 ## Worker Console
 
-`pnpm console` serves a light web console at [http://127.0.0.1:8790](http://127.0.0.1:8790) for
-managing every worker from one place: start, stop, restart, remove, watch status and tail logs.
-It is **a supervisor, not a worker** — it never runs an MCP server itself and it drives the same
-registry as the CLI, so both stay in sync. Workers are spawned detached, so closing the console
-never stops them.
+`pnpm console` starts a light web console in the **background** at
+[http://127.0.0.1:8790](http://127.0.0.1:8790) for managing every worker from one place: start,
+stop, restart, remove, watch status and tail logs. It is **a supervisor, not a worker** — it never
+runs an MCP server itself and it drives the same registry as the CLI, so both stay in sync.
 
 ```bash
-pnpm console        # build the UI if needed, then serve it on 127.0.0.1:8790
-pnpm console:dev    # Vite dev server with HMR on 127.0.0.1:5173 (API proxied to 8790)
-pnpm build:console  # UI build only
+pnpm console         # build the UI if needed, start in the BACKGROUND (survives terminal)
+pnpm console:status  # where is it, is it still serving
+pnpm console:stop    # stop the console — workers keep running
+pnpm console:run     # foreground instead (Ctrl+C stops it)
+pnpm console:dev     # Vite dev server with HMR on :5173 (API proxied to 8790)
+pnpm build:console   # UI build only
 ```
+
+The console is detached exactly like a background worker: it records its PID/port in
+`.run/console.json`, logs to `.run/logs/console-<port>.log`, and closing the terminal does not stop
+it.
+
+**It is a control plane, not a parent.** `pnpm console:stop` (or closing a foreground console) only
+closes the console itself; every worker keeps running and listening, because workers are spawned
+detached and the console holds no process handles. Stop workers with `pnpm stop:v1` or the UI.
 
 - **Status** is derived from the PID *and* port ownership (`running`, `starting`,
   `unresponsive`, `stopping`, `stopped`, `exited`), refreshed every 2s. The ownership check is
@@ -151,7 +166,10 @@ Full API reference, ports and internals: [`docs/worker-console.md`](./docs/worke
 | `pnpm start:v1` | v1 server in the **background** (survives closing the terminal) |
 | `pnpm status:v1` | List recorded background worker(s) |
 | `pnpm stop:v1` | Stop background worker(s) — all of them by default |
-| `pnpm console` | Build + serve the worker console (port 8790) |
+| `pnpm console` | Build + start the worker console in the **background** (port 8790) |
+| `pnpm console:run` | Worker console in the **foreground** (Ctrl+C stops it) |
+| `pnpm console:status` | Show the background console and whether it is serving |
+| `pnpm console:stop` | Stop the background console — workers keep running |
 | `pnpm console:dev` | Console UI in Vite dev mode (port 5173) |
 
 Add `-- --workers N` to `start:v1` for multi-worker background mode.

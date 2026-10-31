@@ -80,6 +80,10 @@ pnpm stop:v1 -- --port 8760     # 只停止该端口上的 worker
 `running`，因此能区分 `running` 与 `alive but NOT listening (booting or hung)`，
 并在端口被其他进程占用时给出警告。
 
+worker 默认绑定 **IPv4 回环地址**（`127.0.0.1`），也就是 `.mcp.json` 指向的地址。若不固定，
+`mcp-use` 会监听 `localhost`，而在 `localhost` 解析为 `::1` 的机器上，worker 就无法被
+`http://127.0.0.1:...` 的客户端访问。确有必要时可用 `HOST=0.0.0.0`（或其他地址）覆盖。
+
 ### 多 Worker（仅后台）
 
 多 worker 仅 `start` 支持，`run` 始终是单实例前台。
@@ -107,16 +111,26 @@ pnpm start:v1 -- -w 5
 
 ## Worker 控制台
 
-`pnpm console` 会在 [http://127.0.0.1:8790](http://127.0.0.1:8790) 提供一个浅色 Web 控制台，
-用于统一管理所有 worker：启动、停止、重启、移除、查看状态与日志。它**是管理者而不是
-worker** —— 自身不运行任何 MCP 服务，并与 CLI 共用同一份注册表，两边始终一致。worker 以
-detached 方式启动，因此关闭控制台不会影响它们。
+`pnpm console` 会在**后台**启动一个浅色 Web 控制台
+（[http://127.0.0.1:8790](http://127.0.0.1:8790)），用于统一管理所有 worker：启动、停止、重启、
+移除、查看状态与日志。它**是管理者而不是 worker** —— 自身不运行任何 MCP 服务，并与 CLI 共用
+同一份注册表，两边始终一致。
 
 ```bash
-pnpm console        # 必要时先构建 UI，然后在 127.0.0.1:8790 提供服务
-pnpm console:dev    # Vite 开发模式（热更新），UI 在 127.0.0.1:5173，API 代理到 8790
-pnpm build:console  # 仅构建 UI
+pnpm console         # 必要时先构建 UI，然后**后台**启动（关闭终端不影响）
+pnpm console:status  # 它在哪、是否还在服务
+pnpm console:stop    # 停止控制台 —— worker 继续运行
+pnpm console:run     # 改为前台运行（Ctrl+C 停止）
+pnpm console:dev     # Vite 开发模式（热更新），UI 在 :5173，API 代理到 8790
+pnpm build:console   # 仅构建 UI
 ```
+
+控制台与后台 worker 一样是 detached 的：PID/端口记录在 `.run/console.json`，日志写入
+`.run/logs/console-<port>.log`，关闭终端不会停止它。
+
+**它是控制面，不是父进程。** `pnpm console:stop`（或关闭前台控制台）只关闭控制台本身，所有
+worker 仍在运行并监听 —— 因为 worker 是 detached 启动的，控制台也没有持有它们的进程句柄。
+停止 worker 请用 `pnpm stop:v1` 或界面上的按钮。
 
 - **状态**由 PID 与端口归属共同判定（`running`、`starting`、`unresponsive`、`stopping`、
   `stopped`、`exited`），每 2 秒刷新一次。归属校验缓存 20 秒、并在每次操作后立即失效，因此轮询
@@ -142,7 +156,10 @@ pnpm build:console  # 仅构建 UI
 | `pnpm start:v1` | v1 **后台**运行（关闭终端后仍继续） |
 | `pnpm status:v1` | 列出已记录的后台 worker |
 | `pnpm stop:v1` | 停止后台 worker —— 默认全部关闭 |
-| `pnpm console` | 构建并启动 Worker 控制台（端口 8790） |
+| `pnpm console` | 构建并**后台**启动 Worker 控制台（端口 8790） |
+| `pnpm console:run` | Worker 控制台**前台**运行（Ctrl+C 停止） |
+| `pnpm console:status` | 查看后台控制台及其服务状态 |
+| `pnpm console:stop` | 停止后台控制台 —— worker 继续运行 |
 | `pnpm console:dev` | 控制台 UI 的 Vite 开发模式（端口 5173） |
 
 `start:v1` 加上 `-- --workers N` 即为后台多 worker 模式。

@@ -46,10 +46,14 @@ function looksLikeOurWorker(pid: number): boolean {
  * Cold boot is slow: `mcp-use start` prints nothing for ~10–20s and only binds
  * the port at the very end (its child `node dist/index.js` does the listening).
  * So "spawned" is not "ready" — callers must probe the port instead.
+ *
+ * Both loopback families are probed: a server listening on `localhost` binds to
+ * whichever family the OS resolves first (`[::1]` on macOS, `127.0.0.1`
+ * elsewhere), so probing only IPv4 would report a healthy server as down.
  */
-function probePort(port: number, timeoutMs = 500): Promise<boolean> {
+function probeHost(host: string, port: number, timeoutMs: number): Promise<boolean> {
   return new Promise((resolve) => {
-    const socket = net.connect({ host: "127.0.0.1", port });
+    const socket = net.connect({ host, port });
     const finish = (ok: boolean): void => {
       socket.removeAllListeners();
       socket.destroy();
@@ -59,6 +63,14 @@ function probePort(port: number, timeoutMs = 500): Promise<boolean> {
     socket.once("connect", () => finish(true));
     socket.once("error", () => finish(false));
   });
+}
+
+/** True when something currently accepts connections on either loopback family. */
+function probePort(port: number, timeoutMs = 500): Promise<boolean> {
+  return Promise.all([
+    probeHost("127.0.0.1", port, timeoutMs),
+    probeHost("::1", port, timeoutMs),
+  ]).then(([ipv4, ipv6]) => ipv4 || ipv6);
 }
 
 /** True when something currently accepts connections on 127.0.0.1:port. */
@@ -172,6 +184,10 @@ export function workerEnv(port: number): NodeJS.ProcessEnv {
   return {
     ...process.env,
     PORT: String(port),
+    // mcp-use defaults its listen host to `localhost`, which resolves to a
+    // different family depending on the machine — so pin it to IPv4 loopback,
+    // the address `.mcp.json` and the docs advertise. Override with HOST=... .
+    HOST: process.env.HOST ?? "127.0.0.1",
     MCP_URL: `http://localhost:${port}`,
   };
 }
