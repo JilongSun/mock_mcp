@@ -15,6 +15,23 @@ export type {
 } from "./types.js";
 
 export {
+  ALLOWED_HOSTS,
+  LOOPBACK_HOST,
+  WILDCARD_HOST,
+  accessUrls,
+  isAllowedHost,
+  isLoopbackHost,
+  isWildcardHost,
+  listLanAddresses,
+  primaryLanAddress,
+  resolveMcpUrl,
+  type AccessScope,
+  type AccessUrl,
+  type BindHost,
+  type LanAddress,
+} from "./network.js";
+
+export {
   LOG_DIR,
   RUN_DIR,
   STATE_FILE,
@@ -51,6 +68,7 @@ export {
   isAlive,
   isPortOpen,
   pidCommand,
+  probeService,
   pidCwd,
   pidParent,
   pidsListeningOn,

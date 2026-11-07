@@ -18,7 +18,17 @@ import fs from "node:fs";
 import http from "node:http";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { LOG_DIR, RUN_DIR, SupervisorError, listRuntimes } from "@mock-mcp/supervisor";
+import {
+  ALLOWED_HOSTS,
+  LOG_DIR,
+  LOOPBACK_HOST,
+  RUN_DIR,
+  SupervisorError,
+  WILDCARD_HOST,
+  accessUrls,
+  listLanAddresses,
+  listRuntimes,
+} from "@mock-mcp/supervisor";
 import { handleApiRequest } from "./src/api.js";
 import { HttpError, sendError } from "./src/http.js";
 import { createStaticHandler } from "./src/static.js";
@@ -27,9 +37,8 @@ const HERE = path.dirname(fileURLToPath(import.meta.url));
 const UI_DIR = path.join(HERE, "dist", "ui");
 const VERSION = "1.0.0";
 const DEFAULT_PORT = 8790;
-const DEFAULT_HOST = "127.0.0.1";
+const DEFAULT_HOST = LOOPBACK_HOST;
 const POLL_INTERVAL_MS = 2_000;
-const LOOPBACK_HOSTS = new Set(["127.0.0.1", "localhost", "::1"]);
 
 interface Options {
   port: number;
@@ -115,12 +124,15 @@ function startVite(): ChildProcess {
 async function main(): Promise<void> {
   const options = parseArgs(process.argv.slice(2));
 
-  // The API spawns and kills processes, so it stays on the loopback interface
-  // unless the operator explicitly opts in to exposing it.
-  if (!LOOPBACK_HOSTS.has(options.host) && process.env.MOCK_MCP_CONSOLE_ALLOW_REMOTE !== "1") {
-    fail(
-      `refusing to bind ${options.host}: the console API can start and stop processes. ` +
-        `Set MOCK_MCP_CONSOLE_ALLOW_REMOTE=1 to override.`,
+  // The API spawns and kills processes and has no authentication, so only two
+  // binds are allowed: loopback, or the wildcard that the operator explicitly
+  // asked for when they want LAN access.
+  if (!(ALLOWED_HOSTS as readonly string[]).includes(options.host)) {
+    fail(`--host must be one of ${ALLOWED_HOSTS.join(", ")} (got "${options.host}")`);
+  }
+  if (options.host === WILDCARD_HOST && listLanAddresses().length === 0) {
+    console.warn(
+      "⚠  no LAN address found — the console is only reachable from this machine for now.\n",
     );
   }
 
@@ -191,12 +203,22 @@ async function main(): Promise<void> {
     server.listen(options.port, options.host, () => resolve());
   });
 
-  const origin = `http://${options.host}:${options.port}`;
   const runtimes = listRuntimes();
 
   console.log("\n🛰  mock-mcp worker console\n");
-  console.log(`   UI:       ${options.dev ? "http://127.0.0.1:5173 (vite dev)" : origin}`);
-  console.log(`   API:      ${origin}/api`);
+  if (options.dev) {
+    console.log("   UI:       http://127.0.0.1:5173 (vite dev)");
+  } else {
+    for (const url of accessUrls(options.host, options.port, "/")) {
+      console.log(`   ${url.scope === "lan" ? "LAN:     " : "UI:      "} ${url.url}`);
+    }
+  }
+  for (const url of accessUrls(options.host, options.port, "/api")) {
+    console.log(`   ${url.scope === "lan" ? "LAN API: " : "API:     "} ${url.url}`);
+  }
+  if (options.host === WILDCARD_HOST) {
+    console.log("\n   ⚠ bound to 0.0.0.0: the API can start/stop processes and has no auth.");
+  }
   console.log(`   Registry: ${path.join(RUN_DIR, "workers.json")}`);
   console.log(`   Logs:     ${LOG_DIR}`);
   console.log(

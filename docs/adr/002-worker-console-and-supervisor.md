@@ -78,13 +78,15 @@ Constraints that shaped the decision:
 
 - The registry moved from `packages/v1/.run/` to the repository-root `.run/`, so docs and
   muscle memory about that path changed (mitigated by migrating the old file automatically).
+- `host` is fixed when a worker is created: changing it means removing and re-creating the worker,
+  since the bind address is baked into the spawned process (and into `MCP_URL`).
 - The console has its own detach/attach lifecycle (`console.json`), separate from the worker
   registry. That is intentional: stopping the console must never be able to stop workers, so the two
   lifecycles are not coupled anywhere.
 - Logs are now one file per worker instead of one per group, which changes the `Logs:` path printed
   by `start` (the format and the commands are unchanged).
 - The console spawns and kills processes with no authentication. It is therefore loopback-only by
-  default and refuses a non-loopback `--host` unless `MOCK_MCP_CONSOLE_ALLOW_REMOTE=1` is set.
+  default; `--host 0.0.0.0` is an explicit opt-in for LAN use and warns when used.
 - Status checks rely on `lsof` / `ps` for ownership and orphan detection. Both are best-effort: when
   they are unavailable the console reports "cannot confirm" rather than guessing, and never kills a
   process it cannot attribute to a worker.

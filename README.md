@@ -84,10 +84,25 @@ Tune the budget with `--timeout <seconds>` (default `45`).
 listening process really belongs to that worker — so it distinguishes `running` from
 `alive but NOT listening (booting or hung)` and warns when `port held by another process`.
 
-Workers bind **IPv4 loopback** (`127.0.0.1`) by default, which is what `.mcp.json` points at. Without
-that pin, `mcp-use` listens on `localhost`, and on machines where `localhost` resolves to `::1` the
-worker becomes unreachable from `http://127.0.0.1:...` clients. Override with `HOST=0.0.0.0` (or any
-address) if you know what you are doing.
+### Bind address (local vs LAN)
+
+Workers bind **IPv4 loopback** (`127.0.0.1`) by default, which is what `.mcp.json` points at. Pass
+`--host 0.0.0.0` to listen on every interface so other machines on your network can connect:
+
+```bash
+pnpm start:v1 -- --port 8799 --host 0.0.0.0
+#   Bind:   0.0.0.0
+#   LAN:    http://192.168.1.20:8799/mcp     ← give this to a client on the LAN
+#   Local:  http://127.0.0.1:8799/mcp
+```
+
+`0.0.0.0` is a *bind* address, so the LAN URLs are derived from this machine's actual interfaces
+(`en0`, `eth0`, …) and printed by `start`. The chosen address is also used as the base URL handed to
+`mcp-use`, so widgets served to a remote host fetch their assets from this machine instead of from
+the client itself.
+
+Only those two values are accepted. Looping back is the default because a LAN-bound server is
+reachable by everything on the network.
 
 ### Multi-Worker (background only)
 
@@ -108,6 +123,7 @@ pnpm start:v1 -- -w 5
 | Option | Description |
 |--------|-------------|
 | `-p, --port <n>` | Base port (default `8760`) |
+| `-H, --host <ip>` | Bind address: `127.0.0.1` (default) or `0.0.0.0` (LAN) |
 | `-w, --workers <n>` | (`start` only) number of background workers (default `1`) |
 | `-t, --timeout <s>` | (`start` only) seconds to wait for readiness (default `45`) |
 | `-a, --all` | (`stop`) stop every recorded worker — already the default |
@@ -129,6 +145,7 @@ pnpm console:stop    # stop the console — workers keep running
 pnpm console:run     # foreground instead (Ctrl+C stops it)
 pnpm console:dev     # Vite dev server with HMR on :5173 (API proxied to 8790)
 pnpm build:console   # UI build only
+pnpm console -- --host 0.0.0.0   # let other machines on the LAN open the console
 ```
 
 The console is detached exactly like a background worker: it records its PID/port in
@@ -145,8 +162,9 @@ detached and the console holds no process handles. Stop workers with `pnpm stop:
   cold with 3 workers); nothing polls while no page is open.
 - **Workers never auto-restart.** The console reports a crashed or hung worker; restarting is a
   deliberate click.
-- The console binds the loopback interface only. Because the API can start and stop processes, a
-  non-loopback `--host` is refused unless `MOCK_MCP_CONSOLE_ALLOW_REMOTE=1` is set.
+- The console binds loopback by default. `--host 0.0.0.0` makes it reachable from the LAN and prints
+  the exact URLs to hand out; since the API can start and stop processes **without authentication**,
+  that mode is opt-in and warns.
 - New workers default to an automatically allocated free port, counting down from the runtime's
   default port. The worker detail panel already carries the (not yet active) fields for
   per-worker capabilities and MCP v1/v2 selection.

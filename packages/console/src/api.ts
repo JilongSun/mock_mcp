@@ -3,10 +3,15 @@
 import fs from "node:fs";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import {
+  ALLOWED_HOSTS,
   LOG_DIR,
+  LOOPBACK_HOST,
   RUN_DIR,
   WORKSPACE_ROOT,
+  accessUrls,
   findFreePort,
+  isAllowedHost,
+  listLanAddresses,
   getWorker,
   groupIdFor,
   inspectWorker,
@@ -55,6 +60,8 @@ function toDto(view: WorkerView): WorkerDto {
     runtime: view.runtime,
     runtimeLabel: view.runtimeLabel,
     port: view.port,
+    host: view.host,
+    urls: view.urls,
     pid: view.pid,
     status: view.status,
     alive: view.alive,
@@ -107,6 +114,9 @@ function metaPayload(ctx: ApiContext): MetaDto {
     version: ctx.version,
     host: ctx.host,
     port: ctx.consolePort,
+    urls: accessUrls(ctx.host, ctx.consolePort, "/"),
+    lanAddresses: listLanAddresses(),
+    allowedHosts: [...ALLOWED_HOSTS],
     workspaceRoot: WORKSPACE_ROOT,
     runDir: RUN_DIR,
     logDir: LOG_DIR,
@@ -177,6 +187,18 @@ function parseCount(raw: unknown): number {
   return value;
 }
 
+function parseHost(raw: unknown): string {
+  if (raw === undefined || raw === null || raw === "") return LOOPBACK_HOST;
+  if (typeof raw !== "string" || !isAllowedHost(raw)) {
+    throw new HttpError(
+      400,
+      "INVALID_HOST",
+      `host must be one of ${ALLOWED_HOSTS.join(", ")} (got "${String(raw)}")`,
+    );
+  }
+  return raw;
+}
+
 function parseRuntimeId(raw: unknown): string {
   if (typeof raw !== "string" || raw.trim() === "") {
     throw new HttpError(400, "INVALID_RUNTIME", "runtime is required");
@@ -219,8 +241,17 @@ async function createWorkers(
   }
 
   const runtimeId = parseRuntimeId(body.runtime);
+  const host = parseHost(body.host);
   const count = parseCount(body.count);
   const requestedPort = parsePort(body.port);
+
+  if (host !== LOOPBACK_HOST && listLanAddresses().length === 0) {
+    throw new HttpError(
+      409,
+      "NO_LAN_ADDRESS",
+      "no LAN address is available on this machine — connect to a network first",
+    );
+  }
 
   if (requestedPort !== "auto" && requestedPort < count) {
     throw new HttpError(
@@ -246,7 +277,15 @@ async function createWorkers(
       const name =
         baseName === "" ? undefined : count > 1 ? `${baseName}-${index + 1}` : baseName;
       started.push(
-        startWorker({ runtime: runtimeId, port, name, capabilities, protocol, groupId }),
+        startWorker({
+          runtime: runtimeId,
+          port,
+          host,
+          name,
+          capabilities,
+          protocol,
+          groupId,
+        }),
       );
     }
   } catch (err) {

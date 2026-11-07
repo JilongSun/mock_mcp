@@ -16,6 +16,7 @@ import {
   LOG_DIR,
   RUN_DIR,
   SupervisorError,
+  accessUrls,
   ensureRunDirs,
   isAlive,
   isPortOpen,
@@ -128,10 +129,13 @@ function serverArgs(options: StartConsoleOptions): string[] {
   return args;
 }
 
+/**
+ * The URL to print for a console instance. A wildcard bind has no single usable
+ * address, so prefer the LAN address clients would actually open.
+ */
 export function consoleUrl(instance: Pick<ConsoleInstance, "host" | "port" | "dev">): string {
-  return instance.dev
-    ? "http://127.0.0.1:5173"
-    : `http://${instance.host}:${instance.port}`;
+  if (instance.dev) return "http://127.0.0.1:5173";
+  return accessUrls(instance.host, instance.port, "/")[0].url;
 }
 
 /** Spawn the console attached to the terminal (used by `run`). */

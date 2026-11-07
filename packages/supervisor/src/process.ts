@@ -6,6 +6,7 @@
 import { spawn, spawnSync, type ChildProcess } from "node:child_process";
 import fs from "node:fs";
 import net from "node:net";
+import { isWildcardHost, resolveMcpUrl } from "./network.js";
 import { ensureRunDirs } from "./paths.js";
 import { resolveRuntimeCommand, type ResolvedRuntime } from "./runtimes.js";
 
@@ -65,12 +66,27 @@ function probeHost(host: string, port: number, timeoutMs: number): Promise<boole
   });
 }
 
-/** True when something currently accepts connections on either loopback family. */
-function probePort(port: number, timeoutMs = 500): Promise<boolean> {
+/** True when something accepts connections on either loopback family. */
+function probeLoopback(port: number, timeoutMs = 500): Promise<boolean> {
   return Promise.all([
     probeHost("127.0.0.1", port, timeoutMs),
     probeHost("::1", port, timeoutMs),
   ]).then(([ipv4, ipv6]) => ipv4 || ipv6);
+}
+
+function probePort(port: number, timeoutMs = 500): Promise<boolean> {
+  return probeLoopback(port, timeoutMs);
+}
+
+/**
+ * True when a service bound to `host` is accepting connections.
+ *
+ * A wildcard bind answers on every interface, so loopback is the cheapest way to
+ * ask without depending on a LAN address that may have changed. A specific
+ * bind host (e.g. a LAN address) is probed directly instead.
+ */
+export function probeService(port: number, host: string): Promise<boolean> {
+  return isWildcardHost(host) ? probeLoopback(port) : probeHost(host, port, 500);
 }
 
 /** True when something currently accepts connections on 127.0.0.1:port. */
@@ -163,11 +179,14 @@ export interface ReadyResult {
 /** Poll until the worker listens on its port, dies, or the budget runs out. */
 export async function waitForPort(
   port: number,
-  opts: { pid: number | null; timeoutMs: number },
+  opts: { pid: number | null; timeoutMs: number; host?: string },
 ): Promise<ReadyResult> {
   const startedAt = Date.now();
+  const probe = (): Promise<boolean> =>
+    opts.host === undefined ? probePort(port) : probeService(port, opts.host);
+
   for (;;) {
-    if (await probePort(port)) {
+    if (await probe()) {
       return { ready: true, elapsedMs: Date.now() - startedAt };
     }
     if (!isAlive(opts.pid)) {
@@ -180,15 +199,17 @@ export async function waitForPort(
   }
 }
 
-export function workerEnv(port: number): NodeJS.ProcessEnv {
+export function workerEnv(port: number, host: string): NodeJS.ProcessEnv {
   return {
     ...process.env,
     PORT: String(port),
     // mcp-use defaults its listen host to `localhost`, which resolves to a
-    // different family depending on the machine — so pin it to IPv4 loopback,
-    // the address `.mcp.json` and the docs advertise. Override with HOST=... .
-    HOST: process.env.HOST ?? "127.0.0.1",
-    MCP_URL: `http://localhost:${port}`,
+    // different family depending on the machine — so always pin it explicitly.
+    HOST: host,
+    // Baked into the widget HTML and server metadata, so it must be an address
+    // clients can reach: loopback for a loopback bind, a LAN address for a
+    // wildcard bind (see resolveMcpUrl).
+    MCP_URL: resolveMcpUrl(host, port),
   };
 }
 
@@ -198,7 +219,7 @@ export function workerEnv(port: number): NodeJS.ProcessEnv {
  */
 export function spawnDetachedWorker(
   runtime: ResolvedRuntime,
-  opts: { port: number; logFile: string },
+  opts: { port: number; host: string; logFile: string },
 ): number {
   ensureRunDirs();
   const { cmd, args, shell } = resolveRuntimeCommand(runtime);
@@ -207,7 +228,7 @@ export function spawnDetachedWorker(
   try {
     const child = spawn(cmd, [...args, "start", "--port", String(opts.port)], {
       cwd: runtime.packagePath,
-      env: workerEnv(opts.port),
+      env: workerEnv(opts.port, opts.host),
       detached: true,
       stdio: ["ignore", fd, fd],
       shell,
@@ -230,11 +251,12 @@ export function spawnDetachedWorker(
 export function spawnForegroundWorker(
   runtime: ResolvedRuntime,
   port: number,
+  host: string,
 ): ChildProcess {
   const { cmd, args, shell } = resolveRuntimeCommand(runtime);
   return spawn(cmd, [...args, "start", "--port", String(port)], {
     cwd: runtime.packagePath,
-    env: workerEnv(port),
+    env: workerEnv(port, host),
     stdio: "inherit",
     shell,
   });

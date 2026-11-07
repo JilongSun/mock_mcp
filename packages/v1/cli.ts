@@ -36,15 +36,20 @@
  */
 
 import {
+  ALLOWED_HOSTS,
   FORCE_KILL_TIMEOUT_MS,
   LOG_DIR,
+  LOOPBACK_HOST,
   SupervisorError,
+  WILDCARD_HOST,
+  accessUrls,
   getRuntime,
   groupIdFor,
   inspectWorkers,
   isAlive,
   listWorkers,
   portsFor,
+  primaryLanAddress,
   removeWorker,
   spawnForegroundWorker,
   startWorker,
@@ -65,6 +70,8 @@ const DEFAULT_START_TIMEOUT_MS = 45_000;
 interface Options {
   command: Command;
   port: number;
+  /** Bind address for the worker. */
+  host: string;
   /** True when the user passed -p/--port explicitly. */
   portExplicit: boolean;
   /** Number of background workers; always 1 for `run`. */
@@ -88,6 +95,7 @@ Commands:
 
 Options:
   -p, --port <n>      Base port (default: ${DEFAULT_PORT})
+  -H, --host <ip>     Bind address: ${LOOPBACK_HOST} (this machine) or 0.0.0.0 (LAN)
   -w, --workers <n>   (start only) number of background workers (default: 1)
   -t, --timeout <s>   (start only) seconds to wait for readiness (default: 45)
   -a, --all           (stop) stop every recorded worker — this is the default
@@ -127,6 +135,7 @@ function parseArgs(argv: string[]): Options {
 
   let port = DEFAULT_PORT;
   let portExplicit = false;
+  let host = LOOPBACK_HOST;
   let workers = 1;
   let workersExplicit = false;
   let timeoutMs = DEFAULT_START_TIMEOUT_MS;
@@ -142,6 +151,16 @@ function parseArgs(argv: string[]): Options {
         if (next === undefined) fail(`${arg} requires a value`);
         port = parsePositiveInt(next, arg);
         portExplicit = true;
+        break;
+      }
+      case "-H":
+      case "--host": {
+        const next = rest[++i];
+        if (next === undefined) fail(`${arg} requires a value`);
+        if (!(ALLOWED_HOSTS as readonly string[]).includes(next)) {
+          fail(`${arg} must be one of ${ALLOWED_HOSTS.join(", ")} (got "${next}")`);
+        }
+        host = next;
         break;
       }
       case "-w":
@@ -188,19 +207,19 @@ function parseArgs(argv: string[]): Options {
     fail(`--all only applies to "stop"`);
   }
 
-  return { command, port, portExplicit, workers, timeoutMs, all };
+  return { command, port, host, portExplicit, workers, timeoutMs, all };
 }
 
 // ─── Foreground (`run`) ─────────────────────────────────────────────────
-async function runForeground(basePort: number): Promise<void> {
+async function runForeground(basePort: number, host: string): Promise<void> {
   const runtime = getRuntime(RUNTIME_ID);
   if (!runtime) fail(`runtime "${RUNTIME_ID}" is not available in this workspace`);
 
   let shuttingDown = false;
 
-  console.log(`\n🚀 Running in the foreground on port ${basePort}...\n`);
+  console.log(`\n🚀 Running in the foreground on ${host}:${basePort}...\n`);
 
-  const child = spawnForegroundWorker(runtime, basePort);
+  const child = spawnForegroundWorker(runtime, basePort, host);
   console.log(`  PID: ${child.pid ?? "starting..."}`);
   console.log(`\n✅ Running. Press Ctrl+C to stop.\n`);
 
@@ -243,6 +262,7 @@ async function startBackground(
   basePort: number,
   workers: number,
   timeoutMs: number,
+  host: string,
 ): Promise<void> {
   const ports = portsFor(basePort, workers);
 
@@ -264,7 +284,7 @@ async function startBackground(
   for (const port of ports) {
     let record;
     try {
-      record = startWorker({ runtime: RUNTIME_ID, port, groupId });
+      record = startWorker({ runtime: RUNTIME_ID, port, host, groupId });
     } catch (err) {
       if (err instanceof SupervisorError) {
         console.error(`Error: ${err.message}\n`);
@@ -312,7 +332,14 @@ async function startBackground(
   console.log(`\n✅ Running in the background — closing this terminal will not stop it.`);
   console.log(`   Group:  ${groupId}`);
   console.log(`   Ports:  ${records.map((record) => record.port).join(", ")}`);
-  console.log(`   MCP:    http://localhost:${basePort}/mcp`);
+  console.log(`   Bind:   ${host}`);
+  for (const url of accessUrls(host, basePort, "/mcp")) {
+    const label = url.scope === "lan" ? "LAN:   " : "Local: ";
+    console.log(`   ${label} ${url.url}`);
+  }
+  if (host === WILDCARD_HOST && primaryLanAddress() === null) {
+    console.log(`   ⚠ no LAN address found — remote clients cannot reach it yet`);
+  }
   console.log(
     records.length === 1
       ? `   Logs:   ${records[0].logFile}`
@@ -469,10 +496,15 @@ const scope = options.portExplicit ? options.port : undefined;
 try {
   switch (options.command) {
     case "run":
-      await runForeground(options.port);
+      await runForeground(options.port, options.host);
       break;
     case "start":
-      await startBackground(options.port, options.workers, options.timeoutMs);
+      await startBackground(
+        options.port,
+        options.workers,
+        options.timeoutMs,
+        options.host,
+      );
       break;
     case "stop":
       await stop(scope);

@@ -1,6 +1,7 @@
 import { useI18n } from "../i18n";
 import type { WorkerDto } from "../../src/types";
 import { formatUptime } from "../format";
+import { CopyButton } from "./CopyButton";
 import { StatusChip } from "./StatusChip";
 
 export type WorkerAction = "start" | "stop" | "restart";
@@ -71,14 +72,30 @@ export function WorkerTable({
                   </span>
                 </td>
                 <td>
-                  <span className="mono text-ink-soft">{worker.port}</span>
-                  {worker.portTakenByOther && (
-                    <span
-                      className="ml-1.5 cursor-help text-warn"
-                      title={t("warning.portConflict")}
-                    >
-                      ⚠
-                    </span>
+                  <div className="flex items-center gap-1.5">
+                    <span className="mono text-ink-soft">{worker.port}</span>
+                    {worker.portTakenByOther && (
+                      <span
+                        className="cursor-help text-warn"
+                        title={t("warning.portConflict")}
+                      >
+                        ⚠
+                      </span>
+                    )}
+                    {worker.host === "0.0.0.0" && (
+                      <span className="chip border border-accent-line bg-accent-soft text-accent">
+                        <span className="dot bg-accent" />
+                        {t("summary.lan")}
+                      </span>
+                    )}
+                  </div>
+                  {worker.urls[0] && (
+                    <div className="mt-1 flex items-center gap-1">
+                      <span className="mono max-w-[230px] truncate text-ink-faint">
+                        {worker.urls[0].url}
+                      </span>
+                      <CopyButton value={worker.urls[0].url} className="!px-1 !py-0" />
+                    </div>
                   )}
                 </td>
                 <td className="mono text-ink-soft">{worker.pid ?? "—"}</td>

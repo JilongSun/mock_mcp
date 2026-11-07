@@ -22,8 +22,12 @@ PID/端口记录在 `.run/console.json`，日志写入 `.run/logs/console-<port>
 
 ```bash
 pnpm console -- --port 8791        # 在另一个端口再起一个控制台
+pnpm console -- --host 0.0.0.0     # 局域网内可访问
 pnpm console:stop -- --port 8791   # 只停那一个
 ```
+
+`--host` 可选 `127.0.0.1`（默认）或 `0.0.0.0`。把控制台绑定到局域网意味着暴露一个**没有任何
+鉴权**、可以启停进程的 API，因此会给出警告。
 
 如果该端口上已记录且仍存活的控制台，`start` 会直接报
 `the console is already running on ... (PID n)`，而不会重复拉起。
@@ -136,7 +140,7 @@ console (detached) ──spawn──▶ worker A (detached，控制台退出后�
 | `GET` | `/api/meta` | 控制台版本、host/port、注册表路径、轮询间隔 |
 | `GET` | `/api/runtimes` | 可启动的运行时（id、label、默认端口、预留的 capability/protocol 选项） |
 | `GET` | `/api/workers` | 全部 worker 及实时状态，附汇总（数量、占用端口） |
-| `POST` | `/api/workers` | 创建并启动 worker：`{ runtime, port?, count?, name? }` |
+| `POST` | `/api/workers` | 创建并启动 worker：`{ runtime, host?, port?, count?, name? }` |
 | `GET` | `/api/workers/:id` | 单个 worker |
 | `POST` | `/api/workers/:id/start` | 启动处于 stopped/exited 的记录 |
 | `POST` | `/api/workers/:id/stop` | 停止（SIGTERM → SIGKILL，随后释放端口） |
@@ -147,6 +151,10 @@ console (detached) ──spawn──▶ worker A (detached，控制台退出后�
 
 `port` 可传数字或 `"auto"`（默认）。自动分配从运行时默认端口向下查找，跳过已记录或已被占用的
 端口；`count > 1` 时端口连续且递减，与 `pnpm start:v1 -- --workers N` 的规则一致。
+
+`host` 可传 `127.0.0.1`（默认）或 `0.0.0.0`。响应里每个 worker 都带 `host` 与 `urls` 数组 ——
+通配符绑定时局域网地址排在最前，并带 `scope: "lan"` 与所属网卡名，UI 据此提供一键复制。
+`GET /api/meta` 对控制台自身给出同样的信息，另含 `lanAddresses` 与允许的 host 取值。
 
 ```bash
 # 在两个空闲端口上启动 worker
@@ -188,8 +196,8 @@ curl -s "http://127.0.0.1:8790/api/workers/w-8760/logs?lines=50"
   被 `SIGKILL`，子进程会被重新挂到 init 上并继续占用端口 —— 因此 `stop` 还会检查谁在监听该端口
   并对其发信号，但仅限能确认属于我们的进程（命令行或工作目录指向该 worker 的包目录）。落在同一
   端口上的外部服务只会上报，绝不会被杀死。
-- **只监听回环地址。** 该 API 能启停进程，因此非回环 `--host` 会被拒绝，除非显式设置
-  `MOCK_MCP_CONSOLE_ALLOW_REMOTE=1`。它没有任何鉴权，定位是本地开发工具。
+- **默认回环，按需开局域网。** `--host` 只接受 `127.0.0.1` 或 `0.0.0.0`，其他取值直接拒绝。
+  由于没有鉴权，通配符绑定属于显式选择，控制台会给出警告并打印因此变得可达的具体 URL。
 - **预留字段。** 每条记录都已带有 `capabilities` 与 `protocol`，每个运行时也可以声明可选的
   capability/protocol 项。目前没有任何逻辑消费它们，详情面板只读展示，以便这些能力落地时不必
   改动数据模型。

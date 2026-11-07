@@ -5,13 +5,21 @@ import { ApiError, api } from "../api";
 
 interface NewWorkerFormProps {
   runtimes: RuntimeDto[];
+  /** LAN addresses of this machine; empty disables the LAN option. */
+  lanAddresses: { address: string; iface: string }[];
   onCreated: (workers: WorkerDto[]) => void;
   onCancel: () => void;
 }
 
-export function NewWorkerForm({ runtimes, onCreated, onCancel }: NewWorkerFormProps) {
+export function NewWorkerForm({
+  runtimes,
+  lanAddresses,
+  onCreated,
+  onCancel,
+}: NewWorkerFormProps) {
   const { t } = useI18n();
   const [runtimeId, setRuntimeId] = useState(runtimes[0]?.id ?? "v1");
+  const [host, setHost] = useState("127.0.0.1");
   const [autoPort, setAutoPort] = useState(true);
   const [port, setPort] = useState(String(runtimes[0]?.defaultPort ?? 8760));
   const [count, setCount] = useState("1");
@@ -21,6 +29,13 @@ export function NewWorkerForm({ runtimes, onCreated, onCancel }: NewWorkerFormPr
   const [plannedPorts, setPlannedPorts] = useState<number[]>([]);
 
   const runtime = runtimes.find((entry) => entry.id === runtimeId);
+
+  const hostHint =
+    host === "0.0.0.0"
+      ? lanAddresses.length > 0
+        ? lanAddresses.map((entry) => entry.address).join(", ")
+        : t("form.hostNoLan")
+      : t("form.hostHint");
 
   useEffect(() => {
     if (runtime && port === "") setPort(String(runtime.defaultPort));
@@ -70,6 +85,7 @@ export function NewWorkerForm({ runtimes, onCreated, onCancel }: NewWorkerFormPr
     try {
       const response = await api.createWorkers({
         runtime: runtimeId,
+        host,
         port: requestedPort,
         count: parsedCount,
         ...(name.trim() === "" ? {} : { name: name.trim() }),
@@ -91,7 +107,7 @@ export function NewWorkerForm({ runtimes, onCreated, onCancel }: NewWorkerFormPr
         </button>
       </div>
 
-      <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
         <label className="block">
           <span className="mb-1 block text-[11px] uppercase tracking-wider text-ink-faint">
             {t("form.runtime")}
@@ -107,6 +123,25 @@ export function NewWorkerForm({ runtimes, onCreated, onCancel }: NewWorkerFormPr
               </option>
             ))}
           </select>
+        </label>
+
+        <label className="block">
+          <span className="mb-1 block text-[11px] uppercase tracking-wider text-ink-faint">
+            {t("form.host")}
+          </span>
+          <select
+            className="input"
+            value={host}
+            onChange={(event) => setHost(event.target.value)}
+          >
+            <option value="127.0.0.1">{t("form.hostLocal")}</option>
+            <option value="0.0.0.0" disabled={lanAddresses.length === 0}>
+              {t("form.hostLan")}
+            </option>
+          </select>
+          <span className="mt-1.5 block text-[11.5px] leading-snug text-ink-faint">
+            {hostHint}
+          </span>
         </label>
 
         <label className="block">

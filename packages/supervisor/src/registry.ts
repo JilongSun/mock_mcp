@@ -7,10 +7,12 @@
 
 import fs from "node:fs";
 import path from "node:path";
+import { LOOPBACK_HOST } from "./network.js";
 import { LEGACY_STATE_FILE, LOG_DIR, STATE_FILE, ensureRunDirs } from "./paths.js";
 import type { RegistryState, WorkerRecord } from "./types.js";
 
-const STATE_VERSION = 2;
+// v3 added `host`; v2 and the legacy job file are read with a loopback default.
+const STATE_VERSION = 3;
 
 export function workerIdFor(port: number): string {
   return `w-${port}`;
@@ -51,6 +53,7 @@ function migrateLegacy(raw: string): RegistryState | null {
           name: `worker-${worker.port}`,
           runtime: "v1",
           port: worker.port,
+          host: LOOPBACK_HOST,
           pid: worker.pid ?? null,
           createdAt: job.createdAt,
           startedAt: job.createdAt,
@@ -69,11 +72,19 @@ function migrateLegacy(raw: string): RegistryState | null {
   }
 }
 
+/** Fill in fields added after a record was written (currently `host`). */
+function normalizeWorker(worker: WorkerRecord): WorkerRecord {
+  return { ...worker, host: worker.host ?? LOOPBACK_HOST };
+}
+
 function readState(): RegistryState {
   try {
     const parsed = JSON.parse(fs.readFileSync(STATE_FILE, "utf8")) as RegistryState;
     if (Array.isArray(parsed.workers)) {
-      return { version: parsed.version ?? STATE_VERSION, workers: parsed.workers };
+      return {
+        version: parsed.version ?? STATE_VERSION,
+        workers: parsed.workers.map(normalizeWorker),
+      };
     }
   } catch {
     // Missing or unreadable — fall through to the legacy file / empty state.

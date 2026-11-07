@@ -80,9 +80,23 @@ pnpm stop:v1 -- --port 8760     # 只停止该端口上的 worker
 `running`，因此能区分 `running` 与 `alive but NOT listening (booting or hung)`，
 并在端口被其他进程占用时给出警告。
 
-worker 默认绑定 **IPv4 回环地址**（`127.0.0.1`），也就是 `.mcp.json` 指向的地址。若不固定，
-`mcp-use` 会监听 `localhost`，而在 `localhost` 解析为 `::1` 的机器上，worker 就无法被
-`http://127.0.0.1:...` 的客户端访问。确有必要时可用 `HOST=0.0.0.0`（或其他地址）覆盖。
+### 监听地址（本机 / 局域网）
+
+worker 默认绑定 **IPv4 回环地址**（`127.0.0.1`），也就是 `.mcp.json` 指向的地址。加上
+`--host 0.0.0.0` 即可监听所有网卡，让同一局域网内的其他设备也能连接：
+
+```bash
+pnpm start:v1 -- --port 8799 --host 0.0.0.0
+#   Bind:   0.0.0.0
+#   LAN:    http://192.168.1.20:8799/mcp     ← 局域网客户端用这个
+#   Local:  http://127.0.0.1:8799/mcp
+```
+
+`0.0.0.0` 是**绑定地址**，客户端无法直接使用，所以 LAN 地址由本机真实网卡（`en0`、`eth0`……）
+推导得出，并由 `start` 打印。该地址同时会作为 `mcp-use` 的 base URL，因此远端宿主拿到的
+widget 会从本机拉取资源，而不是从它自己。
+
+只接受这两个取值。默认回环绑定，因为绑定到局域网的服务器对整个网络可见。
 
 ### 多 Worker（仅后台）
 
@@ -102,6 +116,7 @@ pnpm start:v1 -- -w 5
 | 选项 | 说明 |
 |--------|-------------|
 | `-p, --port <n>` | 基础端口（默认 `8760`） |
+| `-H, --host <ip>` | 监听地址：`127.0.0.1`（默认）或 `0.0.0.0`（局域网） |
 | `-w, --workers <n>` | （仅 `start`）后台 worker 数量（默认 `1`） |
 | `-t, --timeout <s>` | （仅 `start`）等待就绪的秒数（默认 `45`） |
 | `-a, --all` | （`stop`）停止全部已记录 worker —— 本来就是默认行为 |
@@ -123,6 +138,7 @@ pnpm console:stop    # 停止控制台 —— worker 继续运行
 pnpm console:run     # 改为前台运行（Ctrl+C 停止）
 pnpm console:dev     # Vite 开发模式（热更新），UI 在 :5173，API 代理到 8790
 pnpm build:console   # 仅构建 UI
+pnpm console -- --host 0.0.0.0   # 让局域网内其他机器也能打开控制台
 ```
 
 控制台与后台 worker 一样是 detached 的：PID/端口记录在 `.run/console.json`，日志写入
@@ -136,8 +152,8 @@ worker 仍在运行并监听 —— 因为 worker 是 detached 启动的，控�
   `stopped`、`exited`），每 2 秒刷新一次。归属校验缓存 20 秒、并在每次操作后立即失效，因此轮询
   开销很低（3 个 worker 时热请求约 1.4ms、冷请求约 120ms）；没有页面打开时不产生任何轮询。
 - **不会自动重启** worker。崩溃或卡死的 worker 只会上报，重启需要手动点击。
-- 控制台只绑定回环地址。由于该 API 能启停进程，非回环 `--host` 会被拒绝，除非显式设置
-  `MOCK_MCP_CONSOLE_ALLOW_REMOTE=1`。
+- 控制台默认只绑定回环地址。`--host 0.0.0.0` 可让局域网访问，并会打印可直接分发的 URL；
+  由于该 API 能**无鉴权**启停进程，此模式需显式开启并会给出警告。
 - 新增 worker 默认自动分配空闲端口（从运行时默认端口向下查找）。详情面板中已经预留了
   （尚未启用的）per-worker capability 与 MCP v1/v2 选择字段。
 

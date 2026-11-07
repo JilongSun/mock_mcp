@@ -6,12 +6,20 @@
  */
 
 import {
+  ALLOWED_HOSTS,
+  LOOPBACK_HOST,
+  accessUrls,
+  isAllowedHost,
+  type AccessUrl,
+} from "./network.js";
+import {
   hasAncestor,
   isAlive,
   isPortOpen,
   pidCommand,
   pidCwd,
   pidsListeningOn,
+  probeService,
   spawnDetachedWorker,
   terminatePids,
   waitForPort,
@@ -66,6 +74,8 @@ export class SupervisorError extends Error {
 export interface StartWorkerOptions {
   runtime: string;
   port: number;
+  /** Bind address; defaults to loopback. */
+  host?: string;
   name?: string;
   capabilities?: string[];
   protocol?: WorkerProtocol | null;
@@ -98,9 +108,21 @@ function assertPort(port: number): void {
  * spawned — callers that need "actually listening" should await
  * `waitForWorker()` (the console polls instead, so the UI can show "starting").
  */
+function requireHost(raw: string | undefined): string {
+  const host = raw ?? LOOPBACK_HOST;
+  if (!isAllowedHost(host)) {
+    throw new SupervisorError(
+      "INVALID_HOST",
+      `host must be one of ${ALLOWED_HOSTS.join(", ")} (got "${host}")`,
+    );
+  }
+  return host;
+}
+
 export function startWorker(options: StartWorkerOptions): WorkerRecord {
   const runtime = requireRuntime(options.runtime);
   assertPort(options.port);
+  const host = requireHost(options.host);
 
   const existing = getWorker(workerIdFor(options.port));
   if (existing) {
@@ -118,6 +140,7 @@ export function startWorker(options: StartWorkerOptions): WorkerRecord {
     name: options.name?.trim() || `worker-${options.port}`,
     runtime: runtime.id,
     port: options.port,
+    host,
     pid: null,
     createdAt: now,
     startedAt: now,
@@ -129,7 +152,11 @@ export function startWorker(options: StartWorkerOptions): WorkerRecord {
     protocol: options.protocol ?? null,
   };
 
-  record.pid = spawnDetachedWorker(runtime, { port: record.port, logFile: record.logFile });
+  record.pid = spawnDetachedWorker(runtime, {
+    port: record.port,
+    host: record.host,
+    logFile: record.logFile,
+  });
   invalidatePortOwnership(record.port);
   return upsertWorker(record);
 }
@@ -304,6 +331,7 @@ export async function restartWorker(id: string): Promise<WorkerRecord> {
   const now = new Date().toISOString();
   const pid = spawnDetachedWorker(runtime, {
     port: record.port,
+    host: record.host,
     logFile: record.logFile,
   });
   invalidatePortOwnership(record.port);
@@ -343,6 +371,7 @@ export async function startRecordedWorker(id: string): Promise<WorkerRecord> {
   const now = new Date().toISOString();
   const pid = spawnDetachedWorker(runtime, {
     port: record.port,
+    host: record.host,
     logFile: record.logFile,
   });
   invalidatePortOwnership(record.port);
@@ -359,14 +388,18 @@ export function waitForWorker(id: string, timeoutMs: number): Promise<ReadyResul
   if (!record) {
     throw new SupervisorError("NOT_FOUND", `no worker with id "${id}"`, 404);
   }
-  return waitForPort(record.port, { pid: record.pid, timeoutMs });
+  return waitForPort(record.port, {
+    pid: record.pid,
+    timeoutMs,
+    host: record.host,
+  });
 }
 
 export async function inspectWorker(record: WorkerRecord): Promise<WorkerView> {
   const alive = isAlive(record.pid);
-  // "Is anything listening?" is one loopback connect — cheap, so always fresh.
+  // "Is anything listening?" is one connect — cheap, so always fresh.
   // "Is it *ours*?" needs lsof, so that part is cached (see cachedPortOwnership).
-  const anythingListening = alive ? await isPortOpen(record.port) : false;
+  const anythingListening = alive ? await probeService(record.port, record.host) : false;
   const ownership = anythingListening
     ? cachedPortOwnership(record, anythingListening)
     : { owners: [] as number[], owned: false };
@@ -393,6 +426,7 @@ export async function inspectWorker(record: WorkerRecord): Promise<WorkerView> {
     alive,
     listening,
     portTakenByOther,
+    urls: accessUrls(record.host, record.port, "/mcp"),
     uptimeMs: alive ? Date.now() - new Date(startedAt).getTime() : null,
   };
 }

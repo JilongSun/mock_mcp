@@ -1,6 +1,7 @@
 import { useI18n } from "../i18n";
 import type { RuntimeDto, WorkerDto } from "../../src/types";
 import { formatDateTime, formatUptime } from "../format";
+import { CopyButton } from "./CopyButton";
 import { StatusChip } from "./StatusChip";
 import type { WorkerAction } from "./WorkerTable";
 
@@ -97,15 +98,8 @@ export function WorkerDetail({
               <span className="ml-2 text-warn">⚠ {t("warning.port")}</span>
             )}
           </Row>
-          <Row label={t("detail.endpoint")}>
-            <a
-              className="mono text-accent hover:underline"
-              href={`http://localhost:${worker.port}/mcp`}
-              target="_blank"
-              rel="noreferrer"
-            >
-              http://localhost:{worker.port}/mcp
-            </a>
+          <Row label={t("detail.host")}>
+            <span className="mono">{worker.host}</span>
           </Row>
           <Row label={t("column.pid")}>
             <span className="mono">{worker.pid ?? "—"}</span>
@@ -126,6 +120,44 @@ export function WorkerDetail({
           <Row label={t("detail.logFile")}>
             <span className="mono">{worker.logFile}</span>
           </Row>
+        </div>
+
+        <div className="mt-6">
+          <h3 className="text-[11px] uppercase tracking-wider text-ink-faint">
+            {t("detail.urls")}
+          </h3>
+          <ul className="mt-2 space-y-1.5">
+            {worker.urls.map((entry) => (
+              <li
+                key={entry.url}
+                className="flex items-center justify-between gap-2 rounded-md border border-line bg-surface-muted px-2.5 py-1.5"
+              >
+                <div className="min-w-0">
+                  <span
+                    className={`chip mr-1.5 border ${
+                      entry.scope === "lan"
+                        ? "border-accent-line bg-accent-soft text-accent"
+                        : "border-line bg-surface text-ink-faint"
+                    }`}
+                  >
+                    {entry.scope === "lan" ? t("scope.lan") : t("scope.local")}
+                  </span>
+                  <a
+                    className="mono text-[12px] text-accent hover:underline"
+                    href={entry.url}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    {entry.url}
+                  </a>
+                  {entry.iface && (
+                    <span className="mono ml-1.5 text-ink-faint">({entry.iface})</span>
+                  )}
+                </div>
+                <CopyButton value={entry.url} className="shrink-0" />
+              </li>
+            ))}
+          </ul>
         </div>
 
         <div className="mt-6 flex items-center gap-2">

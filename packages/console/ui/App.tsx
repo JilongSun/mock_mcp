@@ -8,6 +8,7 @@ import type {
 } from "../src/types";
 import { ApiError, api } from "./api";
 import { formatClock } from "./format";
+import { CopyButton } from "./components/CopyButton";
 import { LogViewer } from "./components/LogViewer";
 import { NewWorkerForm } from "./components/NewWorkerForm";
 import { SummaryCards } from "./components/SummaryCards";
@@ -225,6 +226,7 @@ export default function App() {
         {showForm && (
           <NewWorkerForm
             runtimes={runtimes}
+            lanAddresses={meta?.lanAddresses ?? []}
             onCancel={() => setShowForm(false)}
             onCreated={async (created) => {
               setShowForm(false);
@@ -251,13 +253,37 @@ export default function App() {
         )}
 
         {meta && (
-          <footer className="pt-2 text-[11.5px] leading-relaxed text-ink-faint">
+          <footer className="space-y-2 pt-2 text-[11.5px] leading-relaxed text-ink-faint">
+            <div>
+              <span className="mr-2">{t("app.thisConsole")}:</span>
+              {meta.urls.map((entry) => (
+                <span key={entry.url} className="mr-2 inline-flex items-center gap-1">
+                  <span
+                    className={`chip border ${
+                      entry.scope === "lan"
+                        ? "border-accent-line bg-accent-soft text-accent"
+                        : "border-line bg-surface text-ink-faint"
+                    }`}
+                  >
+                    {entry.scope === "lan" ? t("scope.lan") : t("scope.local")}
+                  </span>
+                  <span className="mono text-ink-soft">{entry.url}</span>
+                  <CopyButton value={entry.url} className="!px-1 !py-0" />
+                </span>
+              ))}
+              {meta.host === "0.0.0.0" && meta.lanAddresses.length === 0 && (
+                <span className="text-warn">{t("app.noLan")}</span>
+              )}
+            </div>
             <div>
               registry: <span className="mono">{meta.runDir}/workers.json</span>
             </div>
             <div>
-              api: <span className="mono">{meta.host}:{meta.port}/api</span> · poll{" "}
-              <span className="mono">{meta.pollIntervalMs}ms</span>
+              bind: <span className="mono">{meta.host}:{meta.port}</span> · api:{" "}
+              <span className="mono">
+                {meta.urls[0] ? `${meta.urls[0].url.replace(/\/$/, "")}/api` : "/api"}
+              </span>{" "}
+              · poll <span className="mono">{meta.pollIntervalMs}ms</span>
             </div>
           </footer>
         )}

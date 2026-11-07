@@ -1,5 +1,7 @@
 /** Shared types for worker records, registry state and reported status. */
 
+import type { AccessUrl } from "./network.js";
+
 export type WorkerStatus =
   | "running"
   | "starting"
@@ -23,6 +25,8 @@ export interface WorkerRecord {
   /** Runtime id, see `listRuntimes()`. */
   runtime: string;
   port: number;
+  /** Bind address: `127.0.0.1` (this machine) or `0.0.0.0` (LAN). */
+  host: string;
   /** Last known OS pid; `null` when the record never spawned anything. */
   pid: number | null;
   createdAt: string;
@@ -51,6 +55,8 @@ export interface WorkerView extends WorkerRecord {
   listening: boolean;
   /** True when something else holds the port, so the worker cannot bind it. */
   portTakenByOther: boolean;
+  /** Client-facing URLs; LAN entries come first for a wildcard bind. */
+  urls: AccessUrl[];
   /** Milliseconds since the last spawn; `null` when not alive. */
   uptimeMs: number | null;
 }

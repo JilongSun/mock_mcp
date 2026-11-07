@@ -23,6 +23,11 @@ const DICT = {
   "app.retry": { zh: "重试", en: "Retry" },
   "app.close": { zh: "关闭", en: "Close" },
   "app.loadFailed": { zh: "无法连接控制台后端。", en: "Cannot reach the console backend." },
+  "app.thisConsole": { zh: "控制台地址", en: "Console URL" },
+  "app.noLan": {
+    zh: "未检测到局域网地址",
+    en: "No LAN address detected",
+  },
 
   "summary.total": { zh: "Worker 总数", en: "Workers" },
   "summary.running": { zh: "运行中", en: "Running" },
@@ -32,6 +37,9 @@ const DICT = {
   "summary.stopped": { zh: "已停止", en: "Stopped" },
   "summary.exited": { zh: "已退出", en: "Exited" },
   "summary.ports": { zh: "占用端口", en: "Ports in use" },
+  "summary.lan": { zh: "局域网", en: "LAN" },
+  "scope.local": { zh: "本机", en: "local" },
+  "scope.lan": { zh: "局域网", en: "LAN" },
   "summary.none": { zh: "无", en: "none" },
 
   "workers.heading": { zh: "Worker 列表", en: "Workers" },
@@ -57,6 +65,9 @@ const DICT = {
   "action.logs": { zh: "日志", en: "Logs" },
   "action.remove": { zh: "移除", en: "Remove" },
   "action.detail": { zh: "详情", en: "Details" },
+  "action.copy": { zh: "复制", en: "Copy" },
+  "action.copied": { zh: "已复制", en: "Copied" },
+  "action.copyUrl": { zh: "复制访问地址", en: "Copy URL" },
   "action.follow": { zh: "跟随最新", en: "Follow" },
   "action.working": { zh: "处理中…", en: "Working…" },
   "action.removeConfirm": {
@@ -73,6 +84,17 @@ const DICT = {
 
   "form.title": { zh: "新增 worker", en: "New worker" },
   "form.runtime": { zh: "运行时", en: "Runtime" },
+  "form.host": { zh: "监听地址", en: "Bind address" },
+  "form.hostLocal": { zh: "仅本机 127.0.0.1", en: "This machine only (127.0.0.1)" },
+  "form.hostLan": { zh: "局域网 0.0.0.0", en: "LAN (0.0.0.0)" },
+  "form.hostHint": {
+    zh: "局域网模式会监听所有网卡，任何能连到本机的设备都可访问。",
+    en: "LAN mode listens on every interface, so any device that can reach this machine can connect.",
+  },
+  "form.hostNoLan": {
+    zh: "当前没有可用的局域网地址，请先连接网络。",
+    en: "No LAN address is available right now — connect to a network first.",
+  },
   "form.count": { zh: "数量", en: "Count" },
   "form.port": { zh: "起始端口", en: "Base port" },
   "form.portAuto": { zh: "自动分配", en: "Auto-assign" },
@@ -93,6 +115,8 @@ const DICT = {
   "detail.id": { zh: "ID", en: "ID" },
   "detail.group": { zh: "分组", en: "Group" },
   "detail.endpoint": { zh: "MCP 端点", en: "MCP endpoint" },
+  "detail.host": { zh: "监听地址", en: "Bind address" },
+  "detail.urls": { zh: "客户端访问地址", en: "Client URLs" },
   "detail.desired": { zh: "期望状态", en: "Desired state" },
   "detail.desiredRunning": { zh: "运行", en: "running" },
   "detail.desiredStopped": { zh: "停止", en: "stopped" },

@@ -26,7 +26,6 @@ import path from "node:path";
 import {
   DEFAULT_READY_TIMEOUT_MS,
   PACKAGE_ROOT,
-  consoleUrl,
   inspectInstance,
   listInstances,
   pruneInstances,
@@ -35,12 +34,19 @@ import {
   stopConsole,
   type ConsoleInstance,
 } from "./src/instance.js";
-import { FORCE_KILL_TIMEOUT_MS, SupervisorError } from "@mock-mcp/supervisor";
+import {
+  ALLOWED_HOSTS,
+  FORCE_KILL_TIMEOUT_MS,
+  LOOPBACK_HOST,
+  SupervisorError,
+  WILDCARD_HOST,
+  accessUrls,
+} from "@mock-mcp/supervisor";
 
 type Command = "run" | "start" | "stop" | "status";
 
 const DEFAULT_PORT = 8790;
-const DEFAULT_HOST = "127.0.0.1";
+const DEFAULT_HOST = LOOPBACK_HOST;
 
 interface Options {
   command: Command;
@@ -66,7 +72,7 @@ Commands:
 
 Options:
   -p, --port <n>      Console port (default: ${DEFAULT_PORT})
-      --host <h>      Bind address (default: ${DEFAULT_HOST}, loopback only)
+  -H, --host <h>      Bind address: ${LOOPBACK_HOST} (this machine) or 0.0.0.0 (LAN)
       --dev           Serve the UI through Vite (HMR); mostly for \`run\`
   -t, --timeout <s>   (start) seconds to wait for readiness (default: 20)
   -a, --all           (stop) stop every recorded console — this is the default
@@ -124,9 +130,13 @@ function parseArgs(argv: string[]): Options {
         portExplicit = true;
         break;
       }
+      case "-H":
       case "--host": {
         const next = rest[++i];
         if (next === undefined) fail(`${arg} requires a value`);
+        if (!(ALLOWED_HOSTS as readonly string[]).includes(next)) {
+          fail(`${arg} must be one of ${ALLOWED_HOSTS.join(", ")} (got "${next}")`);
+        }
         host = next;
         hostExplicit = true;
         break;
@@ -254,8 +264,16 @@ async function startBackground(options: Options): Promise<void> {
   const seconds = (ready.elapsedMs / 1000).toFixed(1);
   console.log(`  ✅ ready after ${seconds}s (PID ${instance.pid})`);
   console.log(`\n✅ Running in the background — closing this terminal will not stop it.`);
-  console.log(`   UI:      ${consoleUrl(instance)}`);
-  console.log(`   API:     http://${instance.host}:${instance.port}/api`);
+  console.log(`   Bind:    ${instance.host}`);
+  for (const url of accessUrls(instance.host, instance.port, "/")) {
+    console.log(`   ${url.scope === "lan" ? "LAN:    " : "UI:     "} ${url.url}`);
+  }
+  for (const url of accessUrls(instance.host, instance.port, "/api")) {
+    console.log(`   ${url.scope === "lan" ? "LAN API:" : "API:    "} ${url.url}`);
+  }
+  if (instance.host === WILDCARD_HOST) {
+    console.log(`\n   ⚠ bound to 0.0.0.0: the console API can start/stop processes and has no auth.`);
+  }
   console.log(`   Logs:    ${instance.logFile}`);
   console.log(`   Status:  pnpm console:status`);
   console.log(`   Stop:    pnpm console:stop`);
@@ -320,8 +338,12 @@ async function status(port: number | undefined): Promise<void> {
         ? "alive but NOT listening (booting or hung)"
         : "DEAD (stale record)";
     console.log(`● console on port ${instance.port}  PID ${instance.pid}  ${state}`);
-    console.log(`    url:  ${consoleUrl(instance)}`);
-    console.log(`    api:  http://${instance.host}:${instance.port}/api`);
+    for (const url of accessUrls(instance.host, instance.port, "/")) {
+      console.log(`    url:  ${url.url}${url.scope === "lan" ? "  (LAN)" : ""}`);
+    }
+    for (const url of accessUrls(instance.host, instance.port, "/api")) {
+      console.log(`    api:  ${url.url}${url.scope === "lan" ? "  (LAN)" : ""}`);
+    }
     console.log(`    up:   ${formatAge(instance.startedAt)}`);
     console.log(`    logs: ${instance.logFile}`);
   }

@@ -23,8 +23,12 @@ anything.
 
 ```bash
 pnpm console -- --port 8791        # a second console on another port
+pnpm console -- --host 0.0.0.0     # reachable from the LAN
 pnpm console:stop -- --port 8791   # stop just that one
 ```
+
+`--host` accepts `127.0.0.1` (default) or `0.0.0.0`. Binding the console to the LAN exposes an API
+that starts and stops processes **with no authentication**, so it warns when you do it.
 
 Starting a console on a port that is already recorded and alive fails with
 `the console is already running on ... (PID n)` rather than spawning a duplicate.
@@ -144,7 +148,7 @@ Everything is JSON, bound to loopback. Errors use `{ "error": { "code": "...", "
 | `GET` | `/api/meta` | Console version, host/port, registry paths, poll interval |
 | `GET` | `/api/runtimes` | Startable runtimes (id, label, default port, reserved capability/protocol options) |
 | `GET` | `/api/workers` | All workers with live status plus a summary (counts, ports in use) |
-| `POST` | `/api/workers` | Create + start worker(s): `{ runtime, port?, count?, name? }` |
+| `POST` | `/api/workers` | Create + start worker(s): `{ runtime, host?, port?, count?, name? }` |
 | `GET` | `/api/workers/:id` | One worker |
 | `POST` | `/api/workers/:id/start` | Start a recorded worker that is stopped or exited |
 | `POST` | `/api/workers/:id/stop` | Stop it (SIGTERM → SIGKILL, then free the port) |
@@ -156,6 +160,11 @@ Everything is JSON, bound to loopback. Errors use `{ "error": { "code": "...", "
 `port` accepts a number or `"auto"` (the default) — auto-assignment walks down from the runtime's
 default port and skips recorded or bound ports. With `count > 1` the ports are consecutive and
 count down, matching `pnpm start:v1 -- --workers N`.
+
+`host` accepts `127.0.0.1` (default) or `0.0.0.0`. Every worker in the response carries `host` and a
+`urls` array — for a wildcard bind the LAN entries come first, each tagged `scope: "lan"` with the
+interface it belongs to, so the UI can offer them for copying. `GET /api/meta` exposes the same for
+the console itself, plus `lanAddresses` and the allowed hosts.
 
 ```bash
 # Start two workers on free ports
@@ -201,9 +210,9 @@ workers only.
   keeps the port — so `stop` also checks who listens on the port and signals it, but only when the
   process is verifiably ours (its command line or working directory points into the worker's
   package). A foreign service on that port is reported, never killed.
-- **Loopback only.** The API can start and stop processes, so a non-loopback `--host` is refused
-  unless `MOCK_MCP_CONSOLE_ALLOW_REMOTE=1` is set explicitly. There is no authentication: it is a
-  local development tool.
+- **Loopback by default, LAN on request.** `--host` only accepts `127.0.0.1` or `0.0.0.0`; other
+  values are refused. There is no authentication, so wildcard mode is an explicit choice and the
+  console prints a warning plus the exact URLs that become reachable.
 - **Reserved fields.** Every record already carries `capabilities` and `protocol`, and every runtime
   can advertise capability/protocol options. Nothing consumes them yet; the detail panel shows them
   read-only so the data model does not have to change when those features land.

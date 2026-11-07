@@ -13,12 +13,23 @@ export type WorkerStatusDto =
   | "stopped"
   | "exited";
 
+export interface AccessUrlDto {
+  url: string;
+  /** `local` = this machine only; `lan` = other machines on the network. */
+  scope: "local" | "lan";
+  iface?: string;
+}
+
 export interface WorkerDto {
   id: string;
   name: string;
   runtime: string;
   runtimeLabel: string;
   port: number;
+  /** Bind address: `127.0.0.1` or `0.0.0.0`. */
+  host: string;
+  /** Client-facing MCP URLs; LAN entries come first for a wildcard bind. */
+  urls: AccessUrlDto[];
   pid: number | null;
   status: WorkerStatusDto;
   alive: boolean;
@@ -83,6 +94,11 @@ export interface MetaDto {
   version: string;
   host: string;
   port: number;
+  /** URLs this console itself is reachable at (LAN entries first when wildcard). */
+  urls: AccessUrlDto[];
+  /** LAN addresses of this machine, for the "how do others reach me" hint. */
+  lanAddresses: { address: string; iface: string }[];
+  allowedHosts: string[];
   workspaceRoot: string;
   runDir: string;
   logDir: string;
@@ -125,6 +141,8 @@ export interface ApiErrorDto {
 
 export interface CreateWorkerRequestDto {
   runtime: string;
+  /** Bind address: `127.0.0.1` (default) or `0.0.0.0` for LAN access. */
+  host?: string;
   /** `"auto"` (or omitted) lets the console pick free ports. */
   port?: number | "auto";
   name?: string;
