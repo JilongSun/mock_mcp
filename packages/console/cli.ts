@@ -271,9 +271,6 @@ async function startBackground(options: Options): Promise<void> {
   for (const url of accessUrls(instance.host, instance.port, "/api")) {
     console.log(`   ${url.scope === "lan" ? "LAN API:" : "API:    "} ${url.url}`);
   }
-  if (instance.host === WILDCARD_HOST) {
-    console.log(`\n   ⚠ bound to 0.0.0.0: the console API can start/stop processes and has no auth.`);
-  }
   console.log(`   Logs:    ${instance.logFile}`);
   console.log(`   Status:  pnpm console:status`);
   console.log(`   Stop:    pnpm console:stop`);

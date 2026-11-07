@@ -33,13 +33,34 @@ export function isAllowedHost(host: string): host is BindHost {
 
 export interface LanAddress {
   address: string;
-  /** Interface name, e.g. `en0` — useful when a machine has several. */
+  /** Interface name, useful when a machine has several. */
   iface: string;
 }
 
+/** Ranges no client on the network can dial. */
+export function isUnroutableAddress(address: string): boolean {
+  const [first, second] = address.split(".").map(Number);
+
+  // 169.254.0.0/16 — link-local (APIPA). Self-assigned when there is no DHCP;
+  // valid only on the local link, so it is never a stable address to hand out.
+  if (first === 169 && second === 254) return true;
+
+  // 198.18.0.0/15 — RFC 2544 benchmarking range. Transparent proxies also use
+  // it for their fake-ip tunnel gateway. A /15 spans 198.18.* AND 198.19.*,
+  // hence both are matched.
+  if (first === 198 && (second === 18 || second === 19)) return true;
+
+  return false;
+}
+
+/** Tunnel and virtual interfaces — usable, but rarely what a LAN client wants. */
+function isVirtualInterface(iface: string): boolean {
+  return /^(utun|tun|tap|ppp|ipsec|bridge|vmnet|vboxnet|docker|veth)/i.test(iface);
+}
+
 /**
- * IPv4 addresses other machines can reach. Excludes loopback and link-local
- * (`169.254.x.x`, which is not routable in practice).
+ * IPv4 addresses other machines can reach. Excludes loopback, link-local and
+ * proxy fake-ip addresses, which are not dialable from the outside.
  */
 export function listLanAddresses(): LanAddress[] {
   const result: LanAddress[] = [];
@@ -47,19 +68,17 @@ export function listLanAddresses(): LanAddress[] {
   for (const [iface, addresses] of Object.entries(os.networkInterfaces())) {
     for (const entry of addresses ?? []) {
       if (entry.family !== "IPv4" || entry.internal) continue;
-      if (entry.address.startsWith("169.254.")) continue;
+      if (isUnroutableAddress(entry.address)) continue;
       result.push({ address: entry.address, iface });
     }
   }
 
-  // Prefer the interface that carries the default route: `en0`/`eth0` before
-  // docker/vpn bridges, so a laptop with several adapters shows the useful one.
-  const preferred = /^(en0|eth0|wlan0|en1|Wi-Fi)$/i;
-  return result.sort((a, b) => {
-    const aPreferred = preferred.test(a.iface) ? 0 : 1;
-    const bPreferred = preferred.test(b.iface) ? 0 : 1;
-    return aPreferred - bPreferred;
-  });
+  // Physical/primary interfaces keep the order the OS reports them in; tunnel
+  // and container interfaces move last so they do not become the default URL.
+  return result.sort(
+    (a, b) =>
+      Number(isVirtualInterface(a.iface)) - Number(isVirtualInterface(b.iface)),
+  );
 }
 
 /** The address a LAN client should use, or `null` when the machine is offline. */

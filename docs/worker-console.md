@@ -27,8 +27,8 @@ pnpm console -- --host 0.0.0.0     # reachable from the LAN
 pnpm console:stop -- --port 8791   # stop just that one
 ```
 
-`--host` accepts `127.0.0.1` (default) or `0.0.0.0`. Binding the console to the LAN exposes an API
-that starts and stops processes **with no authentication**, so it warns when you do it.
+`--host` accepts `127.0.0.1` (default) or `0.0.0.0`; the latter makes the console reachable from the
+LAN, which is the point of the option.
 
 Starting a console on a port that is already recorded and alive fails with
 `the console is already running on ... (PID n)` rather than spawning a duplicate.
@@ -118,8 +118,8 @@ something else holds the port. The API is polled every 2s by the UI (`pollInterv
 ### Polling cost
 
 The ownership check dominates the cost of a status poll: `lsof` scans every process on the machine
-(~40ms per call here) and it used to be paid for every worker on every poll. Two things keep that
-cheap without weakening the answer:
+and it used to be paid for every worker on every poll. Two things keep that cheap without weakening
+the answer:
 
 - The ownership verdict is cached for `OWNERSHIP_TTL_MS` (20s) and invalidated by every
   start/stop/restart/remove.
@@ -129,10 +129,10 @@ cheap without weakening the answer:
   *who* is there. The residual window is a port that stays busy while changing hands, which is
   reported as ours for at most the TTL.
 
-Measured with 3 workers: ~120ms per poll cold (cache expired) vs ~1.4ms warm, i.e. roughly **10×
-less sustained work** at a 2s interval. Dead and stopped workers cost nothing (liveness is checked
-before ownership). The safety path — reclaiming a port while stopping or restarting — always
-measures ownership live and never reads the cache.
+With N live workers the uncached path costs N `lsof` calls per poll; with the cache it costs roughly
+N calls per TTL window instead. Dead and stopped workers cost nothing (liveness is checked before
+ownership). The safety path — reclaiming a port while stopping or restarting — always measures
+ownership live and never reads the cache.
 
 Nothing polls when no page is open: the console server has no timers of its own, only the browser
 does, and it skips requests while the tab is hidden.
@@ -211,8 +211,8 @@ workers only.
   process is verifiably ours (its command line or working directory points into the worker's
   package). A foreign service on that port is reported, never killed.
 - **Loopback by default, LAN on request.** `--host` only accepts `127.0.0.1` or `0.0.0.0`; other
-  values are refused. There is no authentication, so wildcard mode is an explicit choice and the
-  console prints a warning plus the exact URLs that become reachable.
+  values are refused. This is a mock/testing tool, so no authentication is built in — an auth mode
+  would itself be an optional thing to test.
 - **Reserved fields.** Every record already carries `capabilities` and `protocol`, and every runtime
   can advertise capability/protocol options. Nothing consumes them yet; the detail panel shows them
   read-only so the data model does not have to change when those features land.

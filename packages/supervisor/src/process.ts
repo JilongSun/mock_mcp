@@ -49,8 +49,8 @@ function looksLikeOurWorker(pid: number): boolean {
  * So "spawned" is not "ready" — callers must probe the port instead.
  *
  * Both loopback families are probed: a server listening on `localhost` binds to
- * whichever family the OS resolves first (`[::1]` on macOS, `127.0.0.1`
- * elsewhere), so probing only IPv4 would report a healthy server as down.
+ * whichever family that name resolves to on the host, so probing only one of
+ * them would report a healthy server as down.
  */
 function probeHost(host: string, port: number, timeoutMs: number): Promise<boolean> {
   return new Promise((resolve) => {

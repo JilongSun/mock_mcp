@@ -124,9 +124,6 @@ function startVite(): ChildProcess {
 async function main(): Promise<void> {
   const options = parseArgs(process.argv.slice(2));
 
-  // The API spawns and kills processes and has no authentication, so only two
-  // binds are allowed: loopback, or the wildcard that the operator explicitly
-  // asked for when they want LAN access.
   if (!(ALLOWED_HOSTS as readonly string[]).includes(options.host)) {
     fail(`--host must be one of ${ALLOWED_HOSTS.join(", ")} (got "${options.host}")`);
   }
@@ -215,9 +212,6 @@ async function main(): Promise<void> {
   }
   for (const url of accessUrls(options.host, options.port, "/api")) {
     console.log(`   ${url.scope === "lan" ? "LAN API: " : "API:     "} ${url.url}`);
-  }
-  if (options.host === WILDCARD_HOST) {
-    console.log("\n   ⚠ bound to 0.0.0.0: the API can start/stop processes and has no auth.");
   }
   console.log(`   Registry: ${path.join(RUN_DIR, "workers.json")}`);
   console.log(`   Logs:     ${LOG_DIR}`);

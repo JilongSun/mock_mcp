@@ -85,8 +85,9 @@ Constraints that shaped the decision:
   lifecycles are not coupled anywhere.
 - Logs are now one file per worker instead of one per group, which changes the `Logs:` path printed
   by `start` (the format and the commands are unchanged).
-- The console spawns and kills processes with no authentication. It is therefore loopback-only by
-  default; `--host 0.0.0.0` is an explicit opt-in for LAN use and warns when used.
+- The console spawns and kills processes with no authentication. This is acceptable for a mock
+  testing tool; authentication, if added, should be an optional capability under test rather than a
+  prerequisite. The console binds loopback by default and `--host 0.0.0.0` opens it to the LAN.
 - Status checks rely on `lsof` / `ps` for ownership and orphan detection. Both are best-effort: when
   they are unavailable the console reports "cannot confirm" rather than guessing, and never kills a
   process it cannot attribute to a worker.

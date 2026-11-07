@@ -50,9 +50,8 @@ export const STARTING_GRACE_MS = 60_000;
 /**
  * How long a port-ownership answer may be reused on the *display* path.
  *
- * `lsof` scans every process on the machine (~30–100ms here), so paying it for
- * every worker on every poll is wasteful — ownership does not change from one
- * second to the next. The safety-critical path (reclaiming a port while
+ * `lsof` scans every process on the machine, so paying it for every worker on
+ * every poll is wasteful — ownership does not change from one second to the next. The safety-critical path (reclaiming a port while
  * stopping) always measured it live and still does.
  */
 export const OWNERSHIP_TTL_MS = 20_000;

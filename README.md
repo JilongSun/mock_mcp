@@ -97,7 +97,7 @@ pnpm start:v1 -- --port 8799 --host 0.0.0.0
 ```
 
 `0.0.0.0` is a *bind* address, so the LAN URLs are derived from this machine's actual interfaces
-(`en0`, `eth0`, …) and printed by `start`. The chosen address is also used as the base URL handed to
+(from the machine's own network interfaces) and printed by `start`. The chosen address is also used as the base URL handed to
 `mcp-use`, so widgets served to a remote host fetch their assets from this machine instead of from
 the client itself.
 
@@ -158,13 +158,12 @@ detached and the console holds no process handles. Stop workers with `pnpm stop:
 
 - **Status** is derived from the PID *and* port ownership (`running`, `starting`,
   `unresponsive`, `stopping`, `stopped`, `exited`), refreshed every 2s. The ownership check is
-  cached for 20s and invalidated on every action, so polling stays cheap (~1.4ms warm vs ~120ms
-  cold with 3 workers); nothing polls while no page is open.
+  cached for 20s and invalidated on every action, so polling stays cheap; nothing polls while no
+  page is open.
 - **Workers never auto-restart.** The console reports a crashed or hung worker; restarting is a
   deliberate click.
 - The console binds loopback by default. `--host 0.0.0.0` makes it reachable from the LAN and prints
-  the exact URLs to hand out; since the API can start and stop processes **without authentication**,
-  that mode is opt-in and warns.
+  the exact URLs to hand out.
 - New workers default to an automatically allocated free port, counting down from the runtime's
   default port. The worker detail panel already carries the (not yet active) fields for
   per-worker capabilities and MCP v1/v2 selection.
