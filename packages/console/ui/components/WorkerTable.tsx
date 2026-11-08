@@ -13,6 +13,7 @@ interface WorkerTableProps {
   onSelect: (id: string) => void;
   onAction: (worker: WorkerDto, action: WorkerAction) => void;
   onLogs: (worker: WorkerDto) => void;
+  onInspect: (worker: WorkerDto) => void;
   onRemove: (worker: WorkerDto) => void;
 }
 
@@ -23,6 +24,7 @@ export function WorkerTable({
   onSelect,
   onAction,
   onLogs,
+  onInspect,
   onRemove,
 }: WorkerTableProps) {
   const { t } = useI18n();
@@ -137,6 +139,9 @@ export function WorkerTable({
                         )}
                         <button className="btn btn-sm" onClick={() => onLogs(worker)}>
                           {t("action.logs")}
+                        </button>
+                        <button className="btn btn-sm btn-primary" onClick={() => onInspect(worker)}>
+                          {t("action.inspector")}
                         </button>
                         <button
                           className="btn btn-sm btn-danger"

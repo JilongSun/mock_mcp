@@ -146,6 +146,7 @@ N 次。已停止与已退出的 worker 零成本（先探活再查归属）。�
 | `POST` | `/api/workers/:id/restart` | 按记录的配置停止并重新拉起 |
 | `DELETE` | `/api/workers/:id` | 必要时先停止，然后删除记录 |
 | `GET` | `/api/workers/:id/logs?lines=200` | 尾部日志（`lines` ≤ 2000，从文件末尾 256 KiB 内读取） |
+| `GET` | `/api/workers/:id/inspector` | 该 worker 能否使用调试台，以及可嵌入的调试台 URL |
 | `GET` | `/api/ports/next?runtime=v1&count=2` | 自动分配将会选用的端口 |
 
 `port` 可传数字或 `"auto"`（默认）。自动分配从运行时默认端口向下查找，跳过已记录或已被占用的
@@ -186,6 +187,26 @@ curl -s "http://127.0.0.1:8790/api/workers/w-8760/logs?lines=50"
 前台 `run` 命令保持原样：控制台只管理后台（detached）worker。
 
 ---
+
+## 调试台集成
+
+每个 worker 行都可以打开内嵌的 MCP 调试台。调试台不由控制台运行：worker 自己的构建里带上
+`/inspector`，控制台整屏嵌入它，并传入 `?autoConnect=<worker>/mcp`，打开即已连接。
+
+```bash
+pnpm build:v1:inspector   # 用它代替 pnpm build:v1
+# 然后在控制台重启该 worker（或 pnpm stop:v1 && pnpm start:v1）
+```
+
+- **刻意做成可选。** `@mcp-use/inspector` 依赖树较大，默认的 `pnpm build:v1` 不包含它，worker
+  保持轻量。
+- **按构建而非按 worker。** 该开关记录在 `dist/mcp-use.json` 的 `includeInspector` 中，同一运行时
+  的所有 worker 共用；若要让部分 worker 带调试台、部分不带，需要两份构建。
+- **探测而不是假设。** UI 打开 iframe 之前，`GET /api/workers/:id/inspector` 会先探测
+  `/inspector`；构建未包含时返回 `reason: "not-built"`，面板直接给出重新构建的命令，而不是显示
+  一个坏掉的 iframe。
+- **回环安全。** 返回的 URL 使用浏览器访问控制台时的主机名，因此远端浏览器不会去连自己的回环；
+  从其他机器访问控制台、而 worker 只绑定 `127.0.0.1` 时，返回 `remote-loopback`。
 
 ## 有意的设计取舍
 

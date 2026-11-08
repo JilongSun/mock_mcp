@@ -63,6 +63,8 @@ const DICT = {
   "action.stop": { zh: "停止", en: "Stop" },
   "action.restart": { zh: "重启", en: "Restart" },
   "action.logs": { zh: "日志", en: "Logs" },
+  "action.inspector": { zh: "调试台", en: "Inspector" },
+  "action.openNewTab": { zh: "新窗口打开", en: "Open in new tab" },
   "action.remove": { zh: "移除", en: "Remove" },
   "action.detail": { zh: "详情", en: "Details" },
   "action.copy": { zh: "复制", en: "Copy" },
@@ -138,6 +140,29 @@ const DICT = {
   "detail.runtimeDefault": { zh: "运行时默认", en: "Runtime default" },
   "detail.planned": { zh: "规划中", en: "Planned" },
   "detail.noneYet": { zh: "该运行时尚未提供可选项。", en: "This runtime exposes no options yet." },
+
+  "inspector.title": { zh: "MCP 调试台", en: "MCP Inspector" },
+  "inspector.loading": { zh: "正在连接 worker…", en: "Connecting to the worker…" },
+  "inspector.notRunning": {
+    zh: "worker 未在运行，先启动它再打开 Inspector。",
+    en: "The worker is not running — start it before opening the inspector.",
+  },
+  "inspector.notBuilt": {
+    zh: "当前构建未包含调试台。执行 pnpm build:v1:inspector 重新构建，然后重启该 worker 即可启用。",
+    en: "This build does not include the inspector. Run pnpm build:v1:inspector, then restart the worker.",
+  },
+  "inspector.unreachable": {
+    zh: "无法连接到该 worker 的调试台。",
+    en: "Cannot reach the worker's inspector.",
+  },
+  "inspector.remoteLoopback": {
+    zh: "该 worker 只监听 127.0.0.1，从其他机器访问控制台时无法打开它的调试台。请用 --host 0.0.0.0 重新创建该 worker。",
+    en: "This worker binds 127.0.0.1 only, so its inspector cannot be opened from another machine. Re-create it with --host 0.0.0.0.",
+  },
+  "inspector.hint": {
+    zh: "调试台在面板内运行，已自动连接到该 worker 的 /mcp。",
+    en: "The inspector runs in an iframe and is already connected to this worker's /mcp.",
+  },
 
   "logs.title": { zh: "日志", en: "Logs" },
   "logs.empty": { zh: "日志为空。", en: "Log is empty." },

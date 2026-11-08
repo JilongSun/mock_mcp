@@ -106,6 +106,25 @@ export interface MetaDto {
   startedAt: string;
 }
 
+export type InspectorReason =
+  /** The worker build does not include the inspector. */
+  | "not-built"
+  | "not-running"
+  | "unreachable"
+  | "remote-loopback";
+
+export interface InspectorDto {
+  workerId: string;
+  /** True when the inspector can be embedded for this worker. */
+  available: boolean;
+  /** Inspector URL ready to embed (already carries `?autoConnect=`). */
+  url: string | null;
+  /** MCP endpoint the inspector will connect to. */
+  mcpUrl: string | null;
+  /** Why `available` is false. */
+  reason: InspectorReason | null;
+}
+
 export interface LogsResponseDto {
   id: string;
   logFile: string;

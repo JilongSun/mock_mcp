@@ -11,6 +11,7 @@ import {
   accessUrls,
   findFreePort,
   isAllowedHost,
+  isLoopbackHost,
   listLanAddresses,
   getWorker,
   groupIdFor,
@@ -32,6 +33,7 @@ import type {
   ActionResponseDto,
   CreateWorkerRequestDto,
   CreateWorkersResponseDto,
+  InspectorDto,
   LogsResponseDto,
   MetaDto,
   RuntimeDto,
@@ -172,6 +174,74 @@ function logsPayload(id: string, rawLines: string | null): LogsResponseDto {
     totalLines: all.length,
     truncated: all.length > lines.length || tail.length === LOG_TAIL_BYTES,
   };
+}
+
+/** Hostname the browser used to reach the console (drives embeddable URLs). */
+function requestHostname(req: IncomingMessage): string {
+  const raw = req.headers.host ?? "";
+  if (raw.startsWith("[")) {
+    const end = raw.indexOf("]");
+    return end > 0 ? raw.slice(1, end) : LOOPBACK_HOST;
+  }
+  return raw.split(":")[0] || LOOPBACK_HOST;
+}
+
+const INSPECTOR_PROBE_TIMEOUT_MS = 1_500;
+
+/**
+ * Whether the worker serves `/inspector`. The inspector is part of the worker
+ * build (`--with-inspector`), so a worker built without it answers 404 — that
+ * must be reported instead of embedding a broken frame.
+ */
+async function probeInspector(port: number): Promise<boolean> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), INSPECTOR_PROBE_TIMEOUT_MS);
+  try {
+    const response = await fetch(`http://${LOOPBACK_HOST}:${port}/inspector`, {
+      signal: controller.signal,
+    });
+    if (!response.ok) return false;
+    return (response.headers.get("content-type") ?? "").includes("text/html");
+  } catch {
+    return false;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+async function inspectorPayload(id: string, req: IncomingMessage): Promise<InspectorDto> {
+  const view = await inspectWorkerById(id);
+
+  if (!view.alive || !view.listening) {
+    return { workerId: id, available: false, url: null, mcpUrl: null, reason: "not-running" };
+  }
+
+  if (!(await probeInspector(view.port))) {
+    return { workerId: id, available: false, url: null, mcpUrl: null, reason: "not-built" };
+  }
+
+  const viewHost = requestHostname(req);
+  const consoleIsLocal = isLoopbackHost(viewHost);
+
+  // A loopback-bound worker only exists on this machine; a browser opened from
+  // elsewhere cannot reach it, so embedding would just hang.
+  if (view.host === LOOPBACK_HOST && !consoleIsLocal) {
+    return {
+      workerId: id,
+      available: false,
+      url: null,
+      mcpUrl: null,
+      reason: "remote-loopback",
+    };
+  }
+
+  const targetHost = consoleIsLocal ? LOOPBACK_HOST : viewHost;
+  const mcpUrl = `http://${targetHost}:${view.port}/mcp`;
+  // `autoConnect` overrides the loopback-only URL baked into the worker's
+  // config.json, so a remote browser connects to the right host.
+  const url = `http://${targetHost}:${view.port}/inspector?autoConnect=${encodeURIComponent(mcpUrl)}`;
+
+  return { workerId: id, available: true, url, mcpUrl, reason: null };
 }
 
 function parseCount(raw: unknown): number {
@@ -402,6 +472,11 @@ export async function handleApiRequest(
 
   if (rest.length === 3 && rest[2] === "logs" && method === "GET") {
     sendJson(res, 200, logsPayload(id, url.searchParams.get("lines")));
+    return true;
+  }
+
+  if (rest.length === 3 && rest[2] === "inspector" && method === "GET") {
+    sendJson(res, 200, await inspectorPayload(id, req));
     return true;
   }
 

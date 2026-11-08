@@ -155,6 +155,7 @@ Everything is JSON, bound to loopback. Errors use `{ "error": { "code": "...", "
 | `POST` | `/api/workers/:id/restart` | Stop and respawn with the recorded configuration |
 | `DELETE` | `/api/workers/:id` | Stop (if needed) and drop the record |
 | `GET` | `/api/workers/:id/logs?lines=200` | Tail of the worker log (`lines` ≤ 2000, tailed from the last 256 KiB) |
+| `GET` | `/api/workers/:id/inspector` | Whether this worker can be inspected, plus the embeddable inspector URL |
 | `GET` | `/api/ports/next?runtime=v1&count=2` | Which ports auto-assignment would pick |
 
 `port` accepts a number or `"auto"` (the default) — auto-assignment walks down from the runtime's
@@ -199,6 +200,29 @@ The foreground `run` command stays exactly as it was: the console manages backgr
 workers only.
 
 ---
+
+## Inspector integration
+
+Each worker row links to an embedded MCP inspector. The console does not run it: the worker serves
+`/inspector` from its own build, and the console embeds it full-screen and passes
+`?autoConnect=<worker>/mcp` so it is connected the moment it opens.
+
+```bash
+pnpm build:v1:inspector   # instead of pnpm build:v1
+# restart the worker from the console (or pnpm stop:v1 && pnpm start:v1)
+```
+
+- **Opt-in on purpose.** `@mcp-use/inspector` is a large dependency tree, so the default
+  `pnpm build:v1` leaves it out and workers stay light.
+- **Per build, not per worker.** The flag is stored in `dist/mcp-use.json`
+  (`includeInspector`), which every worker of that runtime shares. Mixing inspector and non-inspector
+  workers would need two builds.
+- **Detected, not assumed.** `GET /api/workers/:id/inspector` probes `/inspector` before the UI
+  opens a frame, and returns `reason: "not-built"` when the build omits it — the panel then shows the
+  rebuild command instead of a broken iframe.
+- **Loopback-safe.** The returned URL uses the host the browser used to reach the console, so a
+  remote browser does not try to reach its own loopback; a loopback-bound worker opened from another
+  machine is reported as `remote-loopback` instead.
 
 ## Deliberate design choices
 

@@ -9,6 +9,8 @@
   "scripts": {
     "prebuild": "pnpm --filter @mock-mcp/shared build && pnpm --filter @mock-mcp/supervisor build",
     "build": "mcp-use build",
+    "build:inspector": "mcp-use build --with-inspector",
+    "prebuild:inspector": "pnpm --filter @mock-mcp/shared build && pnpm --filter @mock-mcp/supervisor build",
     "predev": "pnpm --filter @mock-mcp/shared build && pnpm --filter @mock-mcp/supervisor build",
     "dev": "mcp-use dev --port 8760",
     "prerun": "pnpm --filter @mock-mcp/shared build && pnpm --filter @mock-mcp/supervisor build",

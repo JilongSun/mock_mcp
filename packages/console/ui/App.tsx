@@ -9,6 +9,7 @@ import type {
 import { ApiError, api } from "./api";
 import { formatClock } from "./format";
 import { CopyButton } from "./components/CopyButton";
+import { InspectorPanel } from "./components/InspectorPanel";
 import { LogViewer } from "./components/LogViewer";
 import { NewWorkerForm } from "./components/NewWorkerForm";
 import { SummaryCards } from "./components/SummaryCards";
@@ -29,6 +30,7 @@ export default function App() {
   const [updatedAt, setUpdatedAt] = useState<Date | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [logsId, setLogsId] = useState<string | null>(null);
+  const [inspectorId, setInspectorId] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
 
@@ -84,6 +86,10 @@ export default function App() {
   const logsWorker = useMemo(
     () => data?.workers.find((worker) => worker.id === logsId) ?? null,
     [data, logsId],
+  );
+  const inspectorWorker = useMemo(
+    () => data?.workers.find((worker) => worker.id === inspectorId) ?? null,
+    [data, inspectorId],
   );
 
   const runAction = useCallback(
@@ -248,6 +254,7 @@ export default function App() {
             onSelect={(id) => setSelectedId((current) => (current === id ? null : id))}
             onAction={runAction}
             onLogs={(worker) => setLogsId(worker.id)}
+            onInspect={(worker) => setInspectorId(worker.id)}
             onRemove={removeWorker}
           />
         )}
@@ -301,6 +308,7 @@ export default function App() {
             busy={busyId === selected.id}
             onAction={runAction}
             onLogs={(worker) => setLogsId(worker.id)}
+            onInspect={(worker) => setInspectorId(worker.id)}
             onRemove={removeWorker}
             onClose={() => setSelectedId(null)}
           />
@@ -309,6 +317,13 @@ export default function App() {
 
       {logsWorker && (
         <LogViewer worker={logsWorker} onClose={() => setLogsId(null)} />
+      )}
+
+      {inspectorWorker && (
+        <InspectorPanel
+          worker={inspectorWorker}
+          onClose={() => setInspectorId(null)}
+        />
       )}
     </div>
   );

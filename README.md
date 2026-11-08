@@ -146,7 +146,21 @@ pnpm console:run     # foreground instead (Ctrl+C stops it)
 pnpm console:dev     # Vite dev server with HMR on :5173 (API proxied to 8790)
 pnpm build:console   # UI build only
 pnpm console -- --host 0.0.0.0   # let other machines on the LAN open the console
+
+# Optional: include the MCP inspector so workers can serve /inspector
+pnpm build:v1:inspector
 ```
+
+### Built-in inspector (optional)
+
+Every worker row has an **Inspector** button that opens the worker's own MCP inspector in a
+full-screen panel, already connected to that worker's `/mcp` — browse tools, call them, inspect
+resources and prompts without leaving the console.
+
+The inspector is a large dependency tree, so it is **not** part of the default build. Build it once
+with `pnpm build:v1:inspector` (instead of `pnpm build:v1`) and restart the workers; until then the
+panel explains exactly what to run. The flag lives in the build manifest, which all workers of a
+runtime share, so this is a per-build choice rather than a per-worker one.
 
 The console is detached exactly like a background worker: it records its PID/port in
 `.run/console.json`, logs to `.run/logs/console-<port>.log`, and closing the terminal does not stop
@@ -178,7 +192,8 @@ Full API reference, ports and internals: [`docs/worker-console.md`](./docs/worke
 | Command | Description |
 |---------|-------------|
 | `pnpm dev:v1` | v1 dev server (hot reload + inspector + widgets) |
-| `pnpm build:v1` | v1 production build |
+| `pnpm build:v1` | v1 production build (no inspector — light) |
+| `pnpm build:v1:inspector` | v1 production build **including** the MCP inspector |
 | `pnpm run:v1` | v1 server in the **foreground** (port 8760) |
 | `pnpm start:v1` | v1 server in the **background** (survives closing the terminal) |
 | `pnpm status:v1` | List recorded background worker(s) |

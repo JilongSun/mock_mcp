@@ -4,6 +4,7 @@ import type {
   ActionResponseDto,
   CreateWorkerRequestDto,
   CreateWorkersResponseDto,
+  InspectorDto,
   LogsResponseDto,
   MetaDto,
   PortsResponseDto,
@@ -86,6 +87,9 @@ export const api = {
     request<LogsResponseDto>(
       `/api/workers/${encodeURIComponent(id)}/logs?lines=${lines}`,
     ),
+
+  inspector: (id: string) =>
+    request<InspectorDto>(`/api/workers/${encodeURIComponent(id)}/inspector`),
 
   nextPorts: (runtime: string, count: number) =>
     request<PortsResponseDto>(

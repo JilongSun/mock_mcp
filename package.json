@@ -7,6 +7,7 @@
     "build:shared": "pnpm --filter @mock-mcp/shared build",
     "build:supervisor": "pnpm --filter @mock-mcp/supervisor build",
     "build:v1": "pnpm --filter @mock-mcp/v1 build",
+    "build:v1:inspector": "pnpm --filter @mock-mcp/v1 run build:inspector",
     "run:v1": "pnpm --filter @mock-mcp/v1 run run",
     "start:v1": "pnpm --filter @mock-mcp/v1 run start",
     "stop:v1": "pnpm --filter @mock-mcp/v1 run stop",

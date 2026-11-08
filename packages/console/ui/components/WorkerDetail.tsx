@@ -11,6 +11,7 @@ interface WorkerDetailProps {
   busy: boolean;
   onAction: (worker: WorkerDto, action: WorkerAction) => void;
   onLogs: (worker: WorkerDto) => void;
+  onInspect: (worker: WorkerDto) => void;
   onRemove: (worker: WorkerDto) => void;
   onClose: () => void;
 }
@@ -32,6 +33,7 @@ export function WorkerDetail({
   busy,
   onAction,
   onLogs,
+  onInspect,
   onRemove,
   onClose,
 }: WorkerDetailProps) {
@@ -79,6 +81,9 @@ export function WorkerDetail({
         </button>
         <button className="btn btn-sm" onClick={() => onLogs(worker)}>
           {t("action.logs")}
+        </button>
+        <button className="btn btn-sm btn-primary" onClick={() => onInspect(worker)}>
+          {t("action.inspector")}
         </button>
         <button className="btn btn-sm btn-danger" disabled={busy} onClick={() => onRemove(worker)}>
           {t("action.remove")}

@@ -169,6 +169,21 @@ export function hasAncestor(pid: number, ancestor: number, maxHops = 3): boolean
   return current === ancestor;
 }
 
+/**
+ * Whether the listener on `port` is `pid` or one of its descendants.
+ *
+ * The recorded pid is the `mcp-use` wrapper; the child it spawns is what binds
+ * the port. When the ownership cannot be determined (no `lsof`, no visible
+ * pid) this returns true, so readiness still works on platforms where the
+ * tooling is unavailable.
+ */
+function portBelongsTo(pid: number | null, port: number): boolean {
+  if (pid === null) return true;
+  const owners = pidsListeningOn(port);
+  if (owners.length === 0) return true;
+  return owners.some((owner) => hasAncestor(owner, pid));
+}
+
 export interface ReadyResult {
   ready: boolean;
   elapsedMs: number;
@@ -186,11 +201,13 @@ export async function waitForPort(
     opts.host === undefined ? probePort(port) : probeService(port, opts.host);
 
   for (;;) {
-    if (await probe()) {
-      return { ready: true, elapsedMs: Date.now() - startedAt };
-    }
+    // Liveness first: a port that answers may belong to some other process, so
+    // "the port is open" alone must never be reported as our worker being ready.
     if (!isAlive(opts.pid)) {
       return { ready: false, elapsedMs: Date.now() - startedAt, reason: "exited" };
+    }
+    if ((await probe()) && (await portBelongsTo(opts.pid, port))) {
+      return { ready: true, elapsedMs: Date.now() - startedAt };
     }
     if (Date.now() - startedAt >= opts.timeoutMs) {
       return { ready: false, elapsedMs: Date.now() - startedAt, reason: "timeout" };

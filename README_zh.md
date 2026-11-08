@@ -139,7 +139,20 @@ pnpm console:run     # 改为前台运行（Ctrl+C 停止）
 pnpm console:dev     # Vite 开发模式（热更新），UI 在 :5173，API 代理到 8790
 pnpm build:console   # 仅构建 UI
 pnpm console -- --host 0.0.0.0   # 让局域网内其他机器也能打开控制台
+
+# 可选：构建时带上 MCP 调试台，worker 才会提供 /inspector
+pnpm build:v1:inspector
 ```
+
+### 内置调试台（可选）
+
+每个 worker 行上都有 **调试台** 按钮，点击后在控制台内整屏打开该 worker 自带的 MCP 调试台，
+并且已经自动连接好它的 `/mcp` —— 可以直接浏览、调用工具，查看 resources 与 prompts，不必离开
+控制台。
+
+调试台依赖较大，**默认不包含在构建里**。需要用 `pnpm build:v1:inspector`（代替
+`pnpm build:v1`）重新构建一次并重启 worker；在此之前面板会明确提示该执行什么命令。该开关记录在
+构建清单里，同一运行时的所有 worker 共用一份，所以这是「按构建」而非「按 worker」的选择。
 
 控制台与后台 worker 一样是 detached 的：PID/端口记录在 `.run/console.json`，日志写入
 `.run/logs/console-<port>.log`，关闭终端不会停止它。
@@ -166,7 +179,8 @@ worker 仍在运行并监听 —— 因为 worker 是 detached 启动的，控�
 | 命令 | 说明 |
 |---------|-------------|
 | `pnpm dev:v1` | v1 开发服务器（热重载 + inspector + widgets） |
-| `pnpm build:v1` | v1 生产构建 |
+| `pnpm build:v1` | v1 生产构建（不含调试台，轻量） |
+| `pnpm build:v1:inspector` | v1 生产构建，**包含** MCP 调试台 |
 | `pnpm run:v1` | v1 **前台**运行（端口 8760） |
 | `pnpm start:v1` | v1 **后台**运行（关闭终端后仍继续） |
 | `pnpm status:v1` | 列出已记录的后台 worker |
