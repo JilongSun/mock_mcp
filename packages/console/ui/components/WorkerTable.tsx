@@ -57,7 +57,9 @@ export function WorkerTable({
         <tbody>
           {workers.map((worker) => {
             const busy = busyId === worker.id;
-            const alive = worker.alive;
+            // A worker counts as "up" while it has a process, including the
+            // window where a stop is still in flight.
+            const isUp = worker.alive || worker.status === "stopping";
             return (
               <tr
                 key={worker.id}
@@ -114,7 +116,7 @@ export function WorkerTable({
                       <span className="text-[12px] text-ink-faint">{t("action.working")}</span>
                     ) : (
                       <>
-                        {alive || worker.status === "stopping" ? (
+                        {isUp ? (
                           <button
                             className="btn btn-sm"
                             onClick={() => onAction(worker, "stop")}
@@ -129,7 +131,9 @@ export function WorkerTable({
                             {t("action.start")}
                           </button>
                         )}
-                        {worker.status !== "stopping" && (
+                        {/* Restart only makes sense on a live worker: on a stopped
+                            one it would do exactly what Start does. */}
+                        {isUp && worker.status !== "stopping" && (
                           <button
                             className="btn btn-sm"
                             onClick={() => onAction(worker, "restart")}

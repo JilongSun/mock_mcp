@@ -38,6 +38,8 @@ export function WorkerDetail({
   onClose,
 }: WorkerDetailProps) {
   const { t, lang } = useI18n();
+  // Includes the window where a stop is still in flight.
+  const isUp = worker.alive || worker.status === "stopping";
   const capabilities = runtime?.capabilities ?? [];
   const protocols = runtime?.protocols ?? [];
 
@@ -59,7 +61,7 @@ export function WorkerDetail({
       </header>
 
       <div className="flex flex-wrap gap-1.5 border-b border-line px-5 py-3">
-        {worker.alive || worker.status === "stopping" ? (
+        {isUp ? (
           <button className="btn btn-sm" disabled={busy} onClick={() => onAction(worker, "stop")}>
             {t("action.stop")}
           </button>
@@ -72,13 +74,13 @@ export function WorkerDetail({
             {t("action.start")}
           </button>
         )}
-        <button
-          className="btn btn-sm"
-          disabled={busy || worker.status === "stopping"}
-          onClick={() => onAction(worker, "restart")}
-        >
-          {t("action.restart")}
-        </button>
+        {/* Restart only makes sense on a live worker: on a stopped one it would
+            do exactly what Start does. */}
+        {isUp && worker.status !== "stopping" && (
+          <button className="btn btn-sm" disabled={busy} onClick={() => onAction(worker, "restart")}>
+            {t("action.restart")}
+          </button>
+        )}
         <button className="btn btn-sm" onClick={() => onLogs(worker)}>
           {t("action.logs")}
         </button>
