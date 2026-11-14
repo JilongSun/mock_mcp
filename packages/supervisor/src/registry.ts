@@ -72,6 +72,12 @@ function migrateLegacy(raw: string): RegistryState | null {
   }
 }
 
+/**
+ * Why the last read could not parse the registry, or `null` when it is healthy.
+ * A missing file is normal (first run) and never reported.
+ */
+let registryFault: string | null = null;
+
 /** Fill in fields added after a record was written (currently `host`). */
 function normalizeWorker(worker: WorkerRecord): WorkerRecord {
   return { ...worker, host: worker.host ?? LOOPBACK_HOST };
@@ -81,13 +87,19 @@ function readState(): RegistryState {
   try {
     const parsed = JSON.parse(fs.readFileSync(STATE_FILE, "utf8")) as RegistryState;
     if (Array.isArray(parsed.workers)) {
+      registryFault = null;
       return {
         version: parsed.version ?? STATE_VERSION,
         workers: parsed.workers.map(normalizeWorker),
       };
     }
-  } catch {
-    // Missing or unreadable — fall through to the legacy file / empty state.
+    registryFault = `${STATE_FILE} has no "workers" array`;
+  } catch (err) {
+    // A missing file is the normal first-run case; anything else means the
+    // registry exists but cannot be used, which callers must be able to see.
+    registryFault = fs.existsSync(STATE_FILE)
+      ? `${STATE_FILE} could not be read: ${(err as Error).message}`
+      : null;
   }
 
   try {
@@ -105,9 +117,26 @@ function readState(): RegistryState {
 
 function writeState(state: RegistryState): void {
   ensureRunDirs();
+  registryFault = null;
   const tmp = `${STATE_FILE}.${process.pid}.tmp`;
   fs.writeFileSync(tmp, `${JSON.stringify(state, null, 2)}\n`, "utf8");
   fs.renameSync(tmp, STATE_FILE);
+}
+
+export interface RegistryHealth {
+  ok: boolean;
+  /** Reason the file exists but could not be used; `null` when healthy. */
+  fault: string | null;
+}
+
+/**
+ * Health of the registry file. Re-reads it, so the answer is current — the
+ * console calls this after listing workers and surfaces a fault in the UI
+ * instead of silently showing an empty list.
+ */
+export function getRegistryHealth(): RegistryHealth {
+  readState();
+  return { ok: registryFault === null, fault: registryFault };
 }
 
 export function listWorkers(): WorkerRecord[] {

@@ -99,6 +99,9 @@ Constraints that shaped the decision:
   wins. A lock file is the obvious upgrade if that ever becomes a real problem.
 - `SIGKILL` on the `mcp-use` wrapper orphans its child, which keeps the port. `stop` handles this by
   re-checking port ownership, but the general lesson is that MCP workers are two processes.
+- PIDs are recycled. Every path that signals a process, and every path that reports health, verifies
+  the process still looks like ours (command line / working directory) and fails safe when it cannot
+  — a skipped PID is preferable to killing an unrelated process.
 
 ---
 

@@ -10,6 +10,7 @@ import {
   WORKSPACE_ROOT,
   accessUrls,
   findFreePort,
+  getRegistryHealth,
   isAllowedHost,
   isLoopbackHost,
   listLanAddresses,
@@ -123,6 +124,7 @@ function metaPayload(ctx: ApiContext): MetaDto {
     runDir: RUN_DIR,
     logDir: LOG_DIR,
     pollIntervalMs: ctx.pollIntervalMs,
+    registry: getRegistryHealth(),
     startedAt: ctx.startedAt,
   };
 }

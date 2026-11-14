@@ -145,7 +145,7 @@ Everything is JSON, bound to loopback. Errors use `{ "error": { "code": "...", "
 
 | Method | Path | Description |
 |--------|------|-------------|
-| `GET` | `/api/meta` | Console version, host/port, registry paths, poll interval |
+| `GET` | `/api/meta` | Console version, host/port, registry paths, poll interval, registry health |
 | `GET` | `/api/runtimes` | Startable runtimes (id, label, default port, reserved capability/protocol options) |
 | `GET` | `/api/workers` | All workers with live status plus a summary (counts, ports in use) |
 | `POST` | `/api/workers` | Create + start worker(s): `{ runtime, host?, port?, count?, name? }` |
@@ -234,6 +234,18 @@ pnpm build:v1:inspector   # instead of pnpm build:v1
   keeps the port — so `stop` also checks who listens on the port and signals it, but only when the
   process is verifiably ours (its command line or working directory points into the worker's
   package). A foreign service on that port is reported, never killed.
+- **PID reuse is assumed, not ruled out.** After a crash the OS can hand the recorded PID to an
+  unrelated process, so a PID number is never treated as proof of identity:
+  - Before signalling anything, the command line is checked; **when it cannot be verified the
+    process is left alone** (fail-safe — a skipped PID is reported instead of a stranger being
+    killed). Health checks additionally require the listener to look like this worker, so a recycled
+    PID is reported as `exited` rather than `running`.
+  - `start` only refuses with `ALREADY_RUNNING` when the live PID still looks like the worker; if a
+    stranger inherited the number, the start proceeds (or fails with `PORT_BUSY` when that stranger
+    also holds the port) instead of being blocked forever.
+- **A damaged registry is visible.** If `.run/workers.json` cannot be parsed, `GET /api/meta`
+  returns `registry: { ok: false, fault }` and the UI shows a banner. The file is left untouched, so
+  fixing it (or removing it) restores the list on the next poll.
 - **Loopback by default, LAN on request.** `--host` only accepts `127.0.0.1` or `0.0.0.0`; other
   values are refused. This is a mock/testing tool, so no authentication is built in — an auth mode
   would itself be an optional thing to test.

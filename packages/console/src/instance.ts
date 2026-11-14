@@ -21,6 +21,8 @@ import {
   isAlive,
   isPortOpen,
   pidCommand,
+  pidCwd,
+  pidsListeningOn,
   terminatePids,
   waitForPort,
   type ReadyResult,
@@ -157,20 +159,28 @@ export async function startConsole(
   options: StartConsoleOptions,
 ): Promise<{ instance: ConsoleInstance; ready: ReadyResult }> {
   const existing = findInstance(options.port);
-  if (existing && isAlive(existing.pid)) {
+  if (
+    existing &&
+    isAlive(existing.pid) &&
+    looksLikeOurConsole(existing.pid)
+  ) {
     throw new SupervisorError(
       "ALREADY_RUNNING",
       `the console is already running on ${consoleUrl(existing)} (PID ${existing.pid})`,
       409,
     );
   }
-  if (await isPortOpen(options.port)) {
+
+  // A hard-killed console leaves its server child holding the port; clear that
+  // leftover before reporting a conflict.
+  if (!(await reclaimConsolePort(options.port))) {
     throw new SupervisorError(
       "PORT_BUSY",
-      `port ${options.port} is already in use by another process`,
+      `port ${options.port} is in use by a process that is not this console`,
       409,
     );
   }
+  if (existing) removeInstance(options.port);
 
   ensureRunDirs();
   const logFile = path.join(LOG_DIR, `console-${options.port}.log`);
@@ -233,10 +243,37 @@ export interface ConsoleStopReport extends TerminateResult {
   portReleased: boolean;
 }
 
-/** Only signal a PID that still looks like our console (guards PID reuse). */
+/**
+ * Whether a PID is one of our console servers.
+ *
+ * The command line alone is not enough — `server.ts` is a common file name —
+ * so the working directory must also be this package. That keeps a recycled
+ * PID from being mistaken for (and signalled as) our console.
+ */
 function looksLikeOurConsole(pid: number): boolean {
   const command = pidCommand(pid);
-  return command !== null && /server\.ts|console/.test(command);
+  if (command === null || !command.includes("server.ts")) return false;
+  if (command.includes(PACKAGE_ROOT)) return true;
+  const cwd = pidCwd(pid);
+  return cwd !== null && cwd.startsWith(PACKAGE_ROOT);
+}
+
+/**
+ * Free a port left behind by a previous console of ours.
+ *
+ * Killing the console's wrapper leaves the `tsx` child holding the port, so a
+ * restart would otherwise fail with "already in use" — by ourselves. Only
+ * processes verified as our console are terminated, so a genuine conflict is
+ * still reported instead of being cleaned up.
+ */
+async function reclaimConsolePort(port: number): Promise<boolean> {
+  if (!(await isPortOpen(port))) return true;
+
+  const owners = pidsListeningOn(port).filter((pid) => looksLikeOurConsole(pid));
+  if (owners.length === 0) return false;
+
+  await terminatePids(owners, { verify: (pid) => looksLikeOurConsole(pid) });
+  return !(await isPortOpen(port));
 }
 
 export async function stopConsole(
@@ -245,8 +282,13 @@ export async function stopConsole(
   const alive = isAlive(instance.pid);
   const targets = alive && looksLikeOurConsole(instance.pid) ? [instance.pid] : [];
 
-  const result = await terminatePids(targets);
-  const portReleased = !(await isPortOpen(instance.port));
+  const result = await terminatePids(targets, {
+    verify: (pid) => looksLikeOurConsole(pid),
+  });
+
+  // The wrapper's `tsx` child is what holds the port, so signal it too —
+  // otherwise a plain "stop" would leave the console listening.
+  const portReleased = await reclaimConsolePort(instance.port);
 
   removeInstance(instance.port);
   return { instance, portReleased, ...result };

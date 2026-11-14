@@ -24,6 +24,10 @@ const DICT = {
   "app.close": { zh: "关闭", en: "Close" },
   "app.loadFailed": { zh: "无法连接控制台后端。", en: "Cannot reach the console backend." },
   "app.thisConsole": { zh: "控制台地址", en: "Console URL" },
+  "app.registryFault": {
+    zh: "worker 注册表无法读取，下面显示的是空列表；文件本身未被修改。修复 .run/workers.json 后点击刷新即可恢复。",
+    en: "The worker registry could not be read, so this list is empty. The file was not modified — fix .run/workers.json and refresh.",
+  },
   "app.noLan": {
     zh: "未检测到局域网地址",
     en: "No LAN address detected",

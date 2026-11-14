@@ -302,7 +302,9 @@ async function stop(port: number | undefined): Promise<void> {
     if (report.stopped.length > 0) parts.push(`${report.stopped.length} stopped`);
     if (report.killed.length > 0) parts.push(`${report.killed.length} force-killed`);
     if (report.stale.length > 0) parts.push(`${report.stale.length} already dead`);
-    if (report.skipped.length > 0) parts.push(`${report.skipped.length} skipped (PID reused)`);
+    if (report.skipped.length > 0) {
+      parts.push(`${report.skipped.length} skipped (PID no longer looks like the console)`);
+    }
 
     console.log(`  port ${instance.port} (PID ${instance.pid}) → ${parts.join(", ") || "nothing to do"}`);
     if (!report.portReleased) {

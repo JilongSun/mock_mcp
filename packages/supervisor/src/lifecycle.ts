@@ -199,7 +199,14 @@ export function inspectPortOwnership(record: WorkerRecord): PortOwnership {
   if (owners.length === 0) return { owners, owned: false };
   if (record.pid === null) return { owners, owned: false };
 
-  const owned = owners.some((pid) => hasAncestor(pid, record.pid as number));
+  const runtime = getRuntime(record.runtime);
+  // A PID alone proves nothing: the OS recycles PIDs, so `owners` may contain
+  // an unrelated process that happens to reuse the recorded number (in which
+  // case `hasAncestor` would trivially match). Require the listener to still
+  // look like this worker before calling the port ours.
+  const owned = owners.some(
+    (pid) => isOurProcess(pid, runtime) && hasAncestor(pid, record.pid as number),
+  );
   return { owners, owned };
 }
 
@@ -270,7 +277,12 @@ async function releasePort(record: WorkerRecord): Promise<boolean> {
   );
   if (candidates.length === 0) return false;
 
-  await terminatePids(candidates);
+  // The orphan is the `node dist/index.js` child, whose command line does not
+  // mention mcp-use — so pass the fuller check that also accepts the worker's
+  // package path / working directory.
+  await terminatePids(candidates, {
+    verify: (pid) => isOurProcess(pid, runtime),
+  });
   return !(await isPortOpen(record.port));
 }
 
@@ -351,22 +363,29 @@ export async function startRecordedWorker(id: string): Promise<WorkerRecord> {
   if (!record) {
     throw new SupervisorError("NOT_FOUND", `no worker with id "${id}"`, 404);
   }
-  if (isAlive(record.pid)) {
+
+  const runtime = requireRuntime(record.runtime);
+
+  // A live PID is only "already running" when it still looks like this worker.
+  // After a crash the OS may have reassigned the number to something else, and
+  // treating that as running would block the start forever.
+  if (record.pid !== null && isAlive(record.pid) && isOurProcess(record.pid, runtime)) {
     throw new SupervisorError(
       "ALREADY_RUNNING",
       `worker "${id}" is already running (PID ${record.pid})`,
       409,
     );
   }
+
+  // Frees a port held by our own leftover child; refuses when a stranger owns it.
   if (!(await releasePort(record))) {
     throw new SupervisorError(
       "PORT_BUSY",
-      `port ${record.port} is still held by another process`,
+      `port ${record.port} is held by another process — stop it or remove this worker`,
       409,
     );
   }
 
-  const runtime = requireRuntime(record.runtime);
   const now = new Date().toISOString();
   const pid = spawnDetachedWorker(runtime, {
     port: record.port,
@@ -395,13 +414,23 @@ export function waitForWorker(id: string, timeoutMs: number): Promise<ReadyResul
 }
 
 export async function inspectWorker(record: WorkerRecord): Promise<WorkerView> {
-  const alive = isAlive(record.pid);
+  const pidAlive = isAlive(record.pid);
   // "Is anything listening?" is one connect — cheap, so always fresh.
   // "Is it *ours*?" needs lsof, so that part is cached (see cachedPortOwnership).
-  const anythingListening = alive ? await probeService(record.port, record.host) : false;
+  const anythingListening = pidAlive
+    ? await probeService(record.port, record.host)
+    : false;
   const ownership = anythingListening
     ? cachedPortOwnership(record, anythingListening)
     : { owners: [] as number[], owned: false };
+
+  // A recycled PID keeps `kill(pid, 0)` happy. Ownership proves who the port
+  // belongs to; when the port is not ours, ask the process itself — that way a
+  // stranger that inherited the number shows up as gone rather than "running".
+  const alive =
+    pidAlive &&
+    (ownership.owned ||
+      isOurProcess(record.pid as number, getRuntime(record.runtime)));
   const listening = ownership.owned;
   const portTakenByOther = anythingListening && !ownership.owned;
   const startedAt = record.startedAt ?? record.createdAt;

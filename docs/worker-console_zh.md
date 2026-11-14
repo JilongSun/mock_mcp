@@ -136,7 +136,7 @@ N 次。已停止与已退出的 worker 零成本（先探活再查归属）。�
 
 | 方法 | 路径 | 说明 |
 |--------|------|-------------|
-| `GET` | `/api/meta` | 控制台版本、host/port、注册表路径、轮询间隔 |
+| `GET` | `/api/meta` | 控制台版本、host/port、注册表路径、轮询间隔、注册表健康状况 |
 | `GET` | `/api/runtimes` | 可启动的运行时（id、label、默认端口、预留的 capability/protocol 选项） |
 | `GET` | `/api/workers` | 全部 worker 及实时状态，附汇总（数量、占用端口） |
 | `POST` | `/api/workers` | 创建并启动 worker：`{ runtime, host?, port?, count?, name? }` |
@@ -216,6 +216,15 @@ pnpm build:v1:inspector   # 用它代替 pnpm build:v1
   被 `SIGKILL`，子进程会被重新挂到 init 上并继续占用端口 —— 因此 `stop` 还会检查谁在监听该端口
   并对其发信号，但仅限能确认属于我们的进程（命令行或工作目录指向该 worker 的包目录）。落在同一
   端口上的外部服务只会上报，绝不会被杀死。
+- **默认按"PID 可能被复用"处理。** 崩溃后操作系统可能把记录的 PID 分配给无关进程，因此 PID
+  数字本身从不作为身份凭证：
+  - 发信号前先校验命令行；**无法确认时不杀**（fail-safe —— 报告为 skipped，而不是误杀陌生人）。
+    健康检查同样要求监听者看起来像该 worker，所以被复用的 PID 会显示为 `exited` 而非 `running`。
+  - `start` 只有在存活 PID 仍然像该 worker 时才回 `ALREADY_RUNNING`；若号码被别的进程继承，
+    启动会继续（或在对方同时占用端口时明确报 `PORT_BUSY`），而不是永久卡住。
+- **注册表损坏是可见的。** 若 `.run/workers.json` 无法解析，`GET /api/meta` 返回
+  `registry: { ok: false, fault }`，UI 显示警示条。文件本身不会被修改，修好（或删除）后下一次
+  轮询即可恢复。
 - **默认回环，按需开局域网。** `--host` 只接受 `127.0.0.1` 或 `0.0.0.0`，其他取值直接拒绝。
   这是一个 mock/测试工具，因此不内置鉴权 —— 鉴权本身将来更适合作为一个可选的测试能力。
 - **预留字段。** 每条记录都已带有 `capabilities` 与 `protocol`，每个运行时也可以声明可选的

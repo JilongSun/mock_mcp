@@ -29,18 +29,20 @@ export function isAlive(pid: number | null): boolean {
   }
 }
 
+/** Decides whether a PID may be signalled, guarding against PID reuse. */
+export type PidVerifier = (pid: number) => boolean;
+
 /**
- * Best-effort guard against PID reuse: only kill a process whose command line
- * still looks like ours. On platforms without `/proc` (macOS/Windows) we
- * cannot verify, so we optimistically return true.
+ * Default impersonation check: the command line must still mention `mcp-use`.
+ *
+ * Deliberately fail-safe — when the command line cannot be read the PID is
+ * treated as *not ours* and left alone. PIDs are recycled by the OS, so an
+ * unverifiable process may well be something unrelated; refusing to signal it
+ * costs a manual cleanup, while guessing wrong kills a stranger's process.
  */
-function looksLikeOurWorker(pid: number): boolean {
-  try {
-    const cmdline = fs.readFileSync(`/proc/${pid}/cmdline`, "utf8");
-    return cmdline.includes("mcp-use");
-  } catch {
-    return true;
-  }
+export function isMcpUseProcess(pid: number): boolean {
+  const command = pidCommand(pid);
+  return command !== null && command.includes("mcp-use");
 }
 
 /**
@@ -304,8 +306,9 @@ async function waitForExit(pids: number[], timeoutMs: number): Promise<number[]>
 /** SIGTERM the given PIDs, escalating to SIGKILL for those that survive. */
 export async function terminatePids(
   pids: number[],
-  opts: { timeoutMs?: number } = {},
+  opts: { timeoutMs?: number; verify?: PidVerifier } = {},
 ): Promise<TerminateResult> {
+  const verify = opts.verify ?? isMcpUseProcess;
   const result: TerminateResult = { stopped: [], killed: [], stale: [], skipped: [] };
   const targets: number[] = [];
 
@@ -314,7 +317,7 @@ export async function terminatePids(
       result.stale.push(pid);
       continue;
     }
-    if (!looksLikeOurWorker(pid)) {
+    if (!verify(pid)) {
       result.skipped.push(pid);
       continue;
     }

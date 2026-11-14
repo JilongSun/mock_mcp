@@ -389,7 +389,9 @@ async function stop(filterPort: number | undefined): Promise<void> {
     if (counts.stopped > 0) parts.push(`${counts.stopped} stopped`);
     if (counts.killed > 0) parts.push(`${counts.killed} force-killed`);
     if (counts.stale > 0) parts.push(`${counts.stale} already dead`);
-    if (counts.skipped > 0) parts.push(`${counts.skipped} skipped`);
+    if (counts.skipped > 0) {
+      parts.push(`${counts.skipped} skipped (PID no longer looks like the worker)`);
+    }
 
     const ports = group.workers.map((worker) => worker.port).join(", ");
     console.log(`  ${group.id} (ports ${ports}) → ${parts.join(", ") || "nothing to do"}`);

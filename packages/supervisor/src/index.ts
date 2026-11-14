@@ -40,6 +40,7 @@ export {
 } from "./paths.js";
 
 export {
+  getRegistryHealth,
   groupIdFor,
   listWorkers,
   getWorker,
@@ -49,6 +50,7 @@ export {
   removeWorkerRecord,
   upsertWorker,
   workerIdFor,
+  type RegistryHealth,
 } from "./registry.js";
 
 export {
@@ -66,6 +68,7 @@ export {
   STOP_TIMEOUT_MS,
   hasAncestor,
   isAlive,
+  isMcpUseProcess,
   isPortOpen,
   pidCommand,
   probeService,
@@ -78,6 +81,7 @@ export {
   terminatePids,
   waitForPort,
   workerEnv,
+  type PidVerifier,
   type ReadyResult,
   type TerminateResult,
 } from "./process.js";

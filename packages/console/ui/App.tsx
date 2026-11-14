@@ -198,6 +198,17 @@ export default function App() {
           </div>
         )}
 
+        {meta && !meta.registry.ok && (
+          <div className="card border-danger-line bg-danger-soft px-4 py-3">
+            <p className="text-[12.5px] text-danger">{t("app.registryFault")}</p>
+            {meta.registry.fault && (
+              <p className="mono mt-1 break-all text-[11.5px] text-danger/80">
+                {meta.registry.fault}
+              </p>
+            )}
+          </div>
+        )}
+
         {actionError && (
           <div className="card flex items-center justify-between gap-4 border-warn-line bg-warn-soft px-4 py-3">
             <div className="text-[12.5px] text-warn">{actionError}</div>

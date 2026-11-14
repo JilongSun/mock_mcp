@@ -103,6 +103,8 @@ export interface MetaDto {
   runDir: string;
   logDir: string;
   pollIntervalMs: number;
+  /** Health of `.run/workers.json`; `ok: false` means it could not be used. */
+  registry: { ok: boolean; fault: string | null };
   startedAt: string;
 }
 
