@@ -77,6 +77,41 @@ export function getRuntime(id: string): ResolvedRuntime | undefined {
   return listRuntimes().find((runtime) => runtime.id === id);
 }
 
+/**
+ * Whether a runtime's current build includes the MCP inspector.
+ *
+ * Read from the build manifest written by `mcp-use build --with-inspector`.
+ * Cached briefly: a rebuild flips this, but not often enough to read the file
+ * on every status poll.
+ */
+const INSPECTOR_BUILD_TTL_MS = 10_000;
+const inspectorBuiltCache = new Map<string, { value: boolean; at: number }>();
+
+export function isInspectorBuilt(runtimeId: string): boolean {
+  const cached = inspectorBuiltCache.get(runtimeId);
+  const now = Date.now();
+  if (cached !== undefined && now - cached.at < INSPECTOR_BUILD_TTL_MS) {
+    return cached.value;
+  }
+
+  const runtime = getRuntime(runtimeId);
+  let value = false;
+  if (runtime !== undefined) {
+    try {
+      const manifest = JSON.parse(
+        fs.readFileSync(path.join(runtime.packagePath, "dist", "mcp-use.json"), "utf8"),
+      ) as { includeInspector?: boolean };
+      value = manifest.includeInspector === true;
+    } catch {
+      // No build output (or an unreadable manifest) means no inspector to serve.
+      value = false;
+    }
+  }
+
+  inspectorBuiltCache.set(runtimeId, { value, at: now });
+  return value;
+}
+
 export function resolveRuntimeCommand(runtime: ResolvedRuntime): {
   cmd: string;
   args: string[];

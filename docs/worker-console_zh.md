@@ -149,6 +149,9 @@ N 次。已停止与已退出的 worker 零成本（先探活再查归属）。�
 | `GET` | `/api/workers/:id/inspector` | 该 worker 能否使用调试台，以及可嵌入的调试台 URL |
 | `GET` | `/api/ports/next?runtime=v1&count=2` | 自动分配将会选用的端口 |
 
+若请求的端口已在监听，创建 worker 会立即以 `PORT_BUSY` 失败：不会 spawn 进程、也不会给任何
+进程发信号，因此无需等待 45 秒的就绪超时。
+
 `port` 可传数字或 `"auto"`（默认）。自动分配从运行时默认端口向下查找，跳过已记录或已被占用的
 端口；`count > 1` 时端口连续且递减，与 `pnpm start:v1 -- --workers N` 的规则一致。
 
@@ -202,9 +205,11 @@ pnpm build:v1:inspector   # 用它代替 pnpm build:v1
   保持轻量。
 - **按构建而非按 worker。** 该开关记录在 `dist/mcp-use.json` 的 `includeInspector` 中，同一运行时
   的所有 worker 共用；若要让部分 worker 带调试台、部分不带，需要两份构建。
-- **探测而不是假设。** UI 打开 iframe 之前，`GET /api/workers/:id/inspector` 会先探测
-  `/inspector`；构建未包含时返回 `reason: "not-built"`，面板直接给出重新构建的命令，而不是显示
-  一个坏掉的 iframe。
+- **不可用时直接置灰。** 调试台按钮在无法工作时就是禁用状态，并在 tooltip 里说明原因：worker
+  没有在监听，或该运行时的构建不含调试台（读取构建清单，缓存约 10 秒）。面板自身的错误提示保留
+  作为兜底，用于"轮询之后、点击之前"状态刚好变化的情况。
+- **探测而不是假设。** `GET /api/workers/:id/inspector` 在 UI 打开 iframe 之前也会探测
+  `/inspector`；构建未包含时返回 `reason: "not-built"`。
 - **回环安全。** 返回的 URL 使用浏览器访问控制台时的主机名，因此远端浏览器不会去连自己的回环；
   从其他机器访问控制台、而 worker 只绑定 `127.0.0.1` 时，返回 `remote-loopback`。
 

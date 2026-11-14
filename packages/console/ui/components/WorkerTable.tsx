@@ -144,9 +144,26 @@ export function WorkerTable({
                         <button className="btn btn-sm" onClick={() => onLogs(worker)}>
                           {t("action.logs")}
                         </button>
-                        <button className="btn btn-sm btn-primary" onClick={() => onInspect(worker)}>
-                          {t("action.inspector")}
-                        </button>
+                        {/* Disabled rather than opening a panel that can only
+                            report an error: the inspector needs a listening
+                            worker whose build includes it. */}
+                        <span
+                          title={
+                            !worker.listening
+                              ? t("inspector.disabledNotRunning")
+                              : !worker.inspectorBuilt
+                                ? t("inspector.disabledNotBuilt")
+                                : undefined
+                          }
+                        >
+                          <button
+                            className="btn btn-sm btn-primary"
+                            disabled={!worker.listening || !worker.inspectorBuilt}
+                            onClick={() => onInspect(worker)}
+                          >
+                            {t("action.inspector")}
+                          </button>
+                        </span>
                         <button
                           className="btn btn-sm btn-danger"
                           onClick={() => onRemove(worker)}

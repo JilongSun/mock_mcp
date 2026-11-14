@@ -36,7 +36,12 @@ import {
   upsertWorker,
   workerIdFor,
 } from "./registry.js";
-import { getRuntime, listRuntimes, type ResolvedRuntime } from "./runtimes.js";
+import {
+  getRuntime,
+  isInspectorBuilt,
+  listRuntimes,
+  type ResolvedRuntime,
+} from "./runtimes.js";
 import type {
   WorkerProtocol,
   WorkerRecord,
@@ -118,7 +123,7 @@ function requireHost(raw: string | undefined): string {
   return host;
 }
 
-export function startWorker(options: StartWorkerOptions): WorkerRecord {
+export async function startWorker(options: StartWorkerOptions): Promise<WorkerRecord> {
   const runtime = requireRuntime(options.runtime);
   assertPort(options.port);
   const host = requireHost(options.host);
@@ -128,6 +133,17 @@ export function startWorker(options: StartWorkerOptions): WorkerRecord {
     throw new SupervisorError(
       "WORKER_EXISTS",
       `port ${options.port} is already recorded as worker "${existing.id}" — start, restart or remove it instead`,
+      409,
+    );
+  }
+
+  // Fail fast instead of spawning a process that can never bind: the readiness
+  // wait would otherwise burn its whole budget (~45s) before reporting the same
+  // thing. Nothing is killed here — a new worker never owns an occupied port.
+  if (await isPortOpen(options.port)) {
+    throw new SupervisorError(
+      "PORT_BUSY",
+      `port ${options.port} is already in use — stop whatever holds it, or pick another port`,
       409,
     );
   }
@@ -455,6 +471,7 @@ export async function inspectWorker(record: WorkerRecord): Promise<WorkerView> {
     listening,
     portTakenByOther,
     urls: accessUrls(record.host, record.port, "/mcp"),
+    inspectorBuilt: isInspectorBuilt(record.runtime),
     uptimeMs: alive ? Date.now() - new Date(startedAt).getTime() : null,
   };
 }

@@ -158,6 +158,10 @@ Everything is JSON, bound to loopback. Errors use `{ "error": { "code": "...", "
 | `GET` | `/api/workers/:id/inspector` | Whether this worker can be inspected, plus the embeddable inspector URL |
 | `GET` | `/api/ports/next?runtime=v1&count=2` | Which ports auto-assignment would pick |
 
+Creating a worker fails immediately with `PORT_BUSY` when the requested port is already listening;
+nothing is spawned and no process is signalled, so there is no 45-second readiness timeout to wait
+through.
+
 `port` accepts a number or `"auto"` (the default) — auto-assignment walks down from the runtime's
 default port and skips recorded or bound ports. With `count > 1` the ports are consecutive and
 count down, matching `pnpm start:v1 -- --workers N`.
@@ -217,9 +221,12 @@ pnpm build:v1:inspector   # instead of pnpm build:v1
 - **Per build, not per worker.** The flag is stored in `dist/mcp-use.json`
   (`includeInspector`), which every worker of that runtime shares. Mixing inspector and non-inspector
   workers would need two builds.
-- **Detected, not assumed.** `GET /api/workers/:id/inspector` probes `/inspector` before the UI
-  opens a frame, and returns `reason: "not-built"` when the build omits it — the panel then shows the
-  rebuild command instead of a broken iframe.
+- **Disabled up front.** The Inspector button is greyed out when it cannot work, with the reason in
+  its tooltip: the worker is not listening, or the runtime's build has no inspector (read from the
+  build manifest, cached ~10s). The panel's own error states remain as a fallback for the case where
+  the worker changes between the poll and the click.
+- **Detected, not assumed.** `GET /api/workers/:id/inspector` also probes `/inspector` before the UI
+  opens a frame, and returns `reason: "not-built"` when the build omits it.
 - **Loopback-safe.** The returned URL uses the host the browser used to reach the console, so a
   remote browser does not try to reach its own loopback; a loopback-bound worker opened from another
   machine is reported as `remote-loopback` instead.

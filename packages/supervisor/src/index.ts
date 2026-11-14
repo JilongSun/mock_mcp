@@ -55,6 +55,7 @@ export {
 
 export {
   getRuntime,
+  isInspectorBuilt,
   listRuntimes,
   resolveRuntimeCommand,
   type CapabilitySpec,

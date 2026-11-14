@@ -27,6 +27,7 @@ import {
   startWorker,
   stopWorker,
   type WorkerProtocol,
+  type WorkerRecord,
   type WorkerView,
 } from "@mock-mcp/supervisor";
 import { HttpError, readJsonBody, sendJson, sendNoContent } from "./http.js";
@@ -65,6 +66,7 @@ function toDto(view: WorkerView): WorkerDto {
     port: view.port,
     host: view.host,
     urls: view.urls,
+    inspectorBuilt: view.inspectorBuilt,
     pid: view.pid,
     status: view.status,
     alive: view.alive,
@@ -343,13 +345,13 @@ async function createWorkers(
   const capabilities = Array.isArray(body.capabilities) ? body.capabilities : [];
   const protocol = (body.protocol ?? null) as WorkerProtocol | null;
 
-  const started = [];
+  const started: WorkerRecord[] = [];
   try {
     for (const [index, port] of ports.entries()) {
       const name =
         baseName === "" ? undefined : count > 1 ? `${baseName}-${index + 1}` : baseName;
       started.push(
-        startWorker({
+        await startWorker({
           runtime: runtimeId,
           port,
           host,

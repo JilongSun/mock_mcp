@@ -57,6 +57,8 @@ export interface WorkerView extends WorkerRecord {
   portTakenByOther: boolean;
   /** Client-facing URLs; LAN entries come first for a wildcard bind. */
   urls: AccessUrl[];
+  /** Whether this runtime's build includes the MCP inspector. */
+  inspectorBuilt: boolean;
   /** Milliseconds since the last spawn; `null` when not alive. */
   uptimeMs: number | null;
 }

@@ -146,6 +146,14 @@ const DICT = {
   "detail.noneYet": { zh: "该运行时尚未提供可选项。", en: "This runtime exposes no options yet." },
 
   "inspector.title": { zh: "MCP 调试台", en: "MCP Inspector" },
+  "inspector.disabledNotRunning": {
+    zh: "worker 未运行 —— 启动后才能打开调试台",
+    en: "The worker is not running — start it to open the inspector",
+  },
+  "inspector.disabledNotBuilt": {
+    zh: "当前构建未包含调试台 —— 执行 pnpm build:v1:inspector 后重启 worker",
+    en: "This build has no inspector — run pnpm build:v1:inspector, then restart the worker",
+  },
   "inspector.loading": { zh: "正在连接 worker…", en: "Connecting to the worker…" },
   "inspector.notRunning": {
     zh: "worker 未在运行，先启动它再打开 Inspector。",

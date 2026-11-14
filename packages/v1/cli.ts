@@ -284,7 +284,7 @@ async function startBackground(
   for (const port of ports) {
     let record;
     try {
-      record = startWorker({ runtime: RUNTIME_ID, port, host, groupId });
+      record = await startWorker({ runtime: RUNTIME_ID, port, host, groupId });
     } catch (err) {
       if (err instanceof SupervisorError) {
         console.error(`Error: ${err.message}\n`);

@@ -84,9 +84,23 @@ export function WorkerDetail({
         <button className="btn btn-sm" onClick={() => onLogs(worker)}>
           {t("action.logs")}
         </button>
-        <button className="btn btn-sm btn-primary" onClick={() => onInspect(worker)}>
-          {t("action.inspector")}
-        </button>
+        <span
+          title={
+            !worker.listening
+              ? t("inspector.disabledNotRunning")
+              : !worker.inspectorBuilt
+                ? t("inspector.disabledNotBuilt")
+                : undefined
+          }
+        >
+          <button
+            className="btn btn-sm btn-primary"
+            disabled={!worker.listening || !worker.inspectorBuilt}
+            onClick={() => onInspect(worker)}
+          >
+            {t("action.inspector")}
+          </button>
+        </span>
         <button className="btn btn-sm btn-danger" disabled={busy} onClick={() => onRemove(worker)}>
           {t("action.remove")}
         </button>

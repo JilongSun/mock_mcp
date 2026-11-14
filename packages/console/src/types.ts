@@ -30,6 +30,8 @@ export interface WorkerDto {
   host: string;
   /** Client-facing MCP URLs; LAN entries come first for a wildcard bind. */
   urls: AccessUrlDto[];
+  /** Whether this runtime's build includes the MCP inspector. */
+  inspectorBuilt: boolean;
   pid: number | null;
   status: WorkerStatusDto;
   alive: boolean;
