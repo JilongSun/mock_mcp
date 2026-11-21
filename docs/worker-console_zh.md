@@ -194,25 +194,25 @@ curl -s "http://127.0.0.1:8790/api/workers/w-8760/logs?lines=50"
 
 ## 调试台集成
 
-v1 worker 行可以打开内嵌的 MCP 调试台。调试台不由控制台运行：worker 自己的构建里带上
-`/inspector`，控制台整屏嵌入它，并传入 `?autoConnect=<worker>/mcp`，打开即已连接。
-v2 生产构建不提供内嵌调试台；请运行 `pnpm dev:v2`，访问
-`http://localhost:8770/mcp/inspector`。
+每个 worker 行可以打开内嵌的 MCP 调试台。调试台不由控制台运行：v1 使用
+`/inspector?autoConnect=<worker>/mcp`，v2 使用 `/mcp/inspector?server=<worker>/mcp`；
+控制台整屏嵌入对应地址。
 
 ```bash
 pnpm build:v1:inspector   # 用它代替 pnpm build:v1
+pnpm build:v2:inspector   # 用它代替 pnpm build:v2
 # 然后在控制台重启该 worker（或 pnpm stop:v1 && pnpm start:v1）
 ```
 
-- **刻意做成可选。** `@mcp-use/inspector` 依赖树较大，默认的 `pnpm build:v1` 不包含它，worker
-  保持轻量。
-- **按构建而非按 worker。** 该开关记录在 `dist/mcp-use.json` 的 `includeInspector` 中，同一运行时
-  的所有 worker 共用；若要让部分 worker 带调试台、部分不带，需要两份构建。
+- **刻意做成可选。** 普通构建默认不启用生产调试台。
+- **按构建而非按 worker。** v1 在 `dist/mcp-use.json` 中记录 `includeInspector`；
+  v2 写入 `.mcp-use/build/inspector.json`，由 supervisor 在启动时传入 `--with-inspector`。
+  普通构建会移除标记；更换构建后需重启 worker。
 - **不可用时直接置灰。** 调试台按钮在无法工作时就是禁用状态，并在 tooltip 里说明原因：worker
   没有在监听，或该运行时的构建不含调试台（读取构建清单，缓存约 10 秒）。面板自身的错误提示保留
   作为兜底，用于"轮询之后、点击之前"状态刚好变化的情况。
 - **探测而不是假设。** `GET /api/workers/:id/inspector` 在 UI 打开 iframe 之前也会探测
-  `/inspector`；构建未包含时返回 `reason: "not-built"`。
+  对应运行时的调试台路径；未启用时返回 `reason: "not-built"`。
 - **回环安全。** 返回的 URL 使用浏览器访问控制台时的主机名，因此远端浏览器不会去连自己的回环；
   从其他机器访问控制台、而 worker 只绑定 `127.0.0.1` 时，返回 `remote-loopback`。
 

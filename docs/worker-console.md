@@ -208,27 +208,25 @@ selected runtime, while the console displays both.
 
 ## Inspector integration
 
-For v1, each worker row links to an embedded MCP inspector. The console does not run it: the worker serves
-`/inspector` from its own build, and the console embeds it full-screen and passes
-`?autoConnect=<worker>/mcp` so it is connected the moment it opens.
-The v2 production build does not provide an embedded inspector; use `pnpm dev:v2` and open
-`http://localhost:8770/mcp/inspector` instead.
+Each worker row links to an embedded MCP inspector. The console does not run it: v1 serves
+`/inspector` with `?autoConnect=<worker>/mcp`, while v2 serves `/mcp/inspector` with
+`?server=<worker>/mcp`. The console embeds the appropriate URL full-screen.
 
 ```bash
 pnpm build:v1:inspector   # instead of pnpm build:v1
+pnpm build:v2:inspector   # instead of pnpm build:v2
 # restart the worker from the console (or pnpm stop:v1 && pnpm start:v1)
 ```
 
-- **Opt-in on purpose.** `@mcp-use/inspector` is a large dependency tree, so the default
-  `pnpm build:v1` leaves it out and workers stay light.
-- **Per build, not per worker.** The flag is stored in `dist/mcp-use.json`
-  (`includeInspector`), which every worker of that runtime shares. Mixing inspector and non-inspector
-  workers would need two builds.
+- **Opt-in on purpose.** Normal builds do not enable the production inspector.
+- **Per build, not per worker.** v1 stores `includeInspector` in `dist/mcp-use.json`;
+  v2 writes `.mcp-use/build/inspector.json` and the supervisor passes `--with-inspector`
+  at startup. A normal rebuild removes the flag. Restart workers after changing builds.
 - **Disabled up front.** The Inspector button is greyed out when it cannot work, with the reason in
   its tooltip: the worker is not listening, or the runtime's build has no inspector (read from the
   build manifest, cached ~10s). The panel's own error states remain as a fallback for the case where
   the worker changes between the poll and the click.
-- **Detected, not assumed.** `GET /api/workers/:id/inspector` also probes `/inspector` before the UI
+- **Detected, not assumed.** `GET /api/workers/:id/inspector` also probes the runtime-specific path before the UI
   opens a frame, and returns `reason: "not-built"` when the build omits it.
 - **Loopback-safe.** The returned URL uses the host the browser used to reach the console, so a
   remote browser does not try to reach its own loopback; a loopback-bound worker opened from another

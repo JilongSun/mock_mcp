@@ -42,7 +42,7 @@ pnpm dev:v2
 
 打开 [http://localhost:8770/mcp/inspector](http://localhost:8770/mcp/inspector)。
 v2 包含四个绑定工具的 MCP Apps：用户搜索、订单列表、位置地图和交互式订单管理器。
-v2 生产构建不包含调试台。
+生产环境需要调试台时，运行 `pnpm build:v2:inspector` 并重启 worker。
 
 `manage-orders` 会打开**订单管理器（Order Manager）**小组件，其按钮回调一个独立的、widget 内部专用的
 辅助工具 `apply-order-action`（`action: "update-status"` 或 `action: "undo"`）。把两者分开，启动器就能保持
@@ -154,20 +154,22 @@ pnpm console:dev     # Vite 开发模式（热更新），UI 在 :5173，API 代
 pnpm build:console   # 仅构建 UI
 pnpm console -- --host 0.0.0.0   # 让局域网内其他机器也能打开控制台
 
-# 可选：构建时带上 MCP 调试台，worker 才会提供 /inspector
+# 可选：为对应运行时启用生产调试台
 pnpm build:v1:inspector
+pnpm build:v2:inspector
 ```
 
 ### 内置调试台（可选）
 
-v1 的 worker 行上有 **调试台** 按钮，点击后在控制台内整屏打开该 worker 自带的 MCP 调试台，
+每个 worker 行上有 **调试台** 按钮，点击后在控制台内整屏打开该 worker 自带的 MCP 调试台，
 并且已经自动连接好它的 `/mcp` —— 可以直接浏览、调用工具，查看 resources 与 prompts，不必离开
 控制台。
 
-调试台依赖较大，**默认不包含在构建里**。需要用 `pnpm build:v1:inspector`（代替
-`pnpm build:v1`）重新构建一次并重启 worker；在此之前面板会明确提示该执行什么命令。该开关记录在
+调试台**默认不启用**。需要用 `pnpm build:v1:inspector` 或 `pnpm build:v2:inspector`
+重新构建一次并重启 worker；在此之前面板会明确提示该执行什么命令。该开关记录在
 构建清单里，同一运行时的所有 worker 共用一份，所以这是「按构建」而非「按 worker」的选择。
-v2 生产运行时不提供此内嵌调试台；请使用 `dev:v2` 调试。
+v1 的路径是 `/inspector`；v2 在 worker 启动时挂载到 `/mcp/inspector`。
+执行普通构建后需重新执行带调试台的构建才能再次启用。
 
 控制台与后台 worker 一样是 detached 的：PID/端口记录在 `.run/console.json`，日志写入
 `.run/logs/console-<port>.log`，关闭终端不会停止它。
@@ -202,6 +204,7 @@ worker 仍在运行并监听 —— 因为 worker 是 detached 启动的，控�
 | `pnpm stop:v1` | 停止后台 worker —— 默认全部关闭 |
 | `pnpm dev:v2` | v2 开发服务器与调试台（端口 8770） |
 | `pnpm build:v2` | 构建 v2 服务器和 MCP Apps |
+| `pnpm build:v2:inspector` | 构建 v2 并启用生产调试台 |
 | `pnpm run:v2` / `pnpm start:v2` | v2 前台 / 后台运行 |
 | `pnpm status:v2` / `pnpm stop:v2` | 查看 / 停止已记录的 v2 worker |
 | `pnpm console` | 构建并**后台**启动 Worker 控制台（端口 8790） |

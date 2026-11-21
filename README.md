@@ -42,7 +42,8 @@ pnpm dev:v2
 
 Open [http://localhost:8770/mcp/inspector](http://localhost:8770/mcp/inspector).
 The v2 server includes the four tool-bound MCP Apps: user search, orders, locations and
-the interactive order manager. Its production build does not include an inspector.
+the interactive order manager. To enable the production inspector, run
+`pnpm build:v2:inspector` and restart the worker.
 
 `manage-orders` opens the **Order Manager** widget, whose buttons call a separate widget-internal
 helper, `apply-order-action` (`action: "update-status"` or `action: "undo"`). Keeping the two apart
@@ -161,21 +162,23 @@ pnpm console:dev     # Vite dev server with HMR on :5173 (API proxied to 8790)
 pnpm build:console   # UI build only
 pnpm console -- --host 0.0.0.0   # let other machines on the LAN open the console
 
-# Optional: include the MCP inspector so workers can serve /inspector
+# Optional: enable the production inspector for the chosen runtime
 pnpm build:v1:inspector
+pnpm build:v2:inspector
 ```
 
 ### Built-in inspector (optional)
 
-For v1, each worker row has an **Inspector** button that opens the worker's own MCP inspector in a
+Each worker row has an **Inspector** button that opens the worker's own MCP inspector in a
 full-screen panel, already connected to that worker's `/mcp` — browse tools, call them, inspect
 resources and prompts without leaving the console.
 
-The inspector is a large dependency tree, so it is **not** part of the default build. Build it once
-with `pnpm build:v1:inspector` (instead of `pnpm build:v1`) and restart the workers; until then the
+The inspector is **not** enabled by the default build. Build it once
+with `pnpm build:v1:inspector` or `pnpm build:v2:inspector` and restart the workers; until then the
 panel explains exactly what to run. The flag lives in the build manifest, which all workers of a
 runtime share, so this is a per-build choice rather than a per-worker one.
-The production v2 runtime does not provide this embedded inspector; use `dev:v2` for inspection.
+v1 serves it at `/inspector`; v2 mounts it at `/mcp/inspector` when the worker starts.
+Run the inspector build again after a normal rebuild to re-enable it.
 
 The console is detached exactly like a background worker: it records its PID/port in
 `.run/console.json`, logs to `.run/logs/console-<port>.log`, and closing the terminal does not stop
@@ -214,6 +217,7 @@ Full API reference, ports and internals: [`docs/worker-console.md`](./docs/worke
 | `pnpm stop:v1` | Stop background worker(s) — all of them by default |
 | `pnpm dev:v2` | v2 development server and inspector (port 8770) |
 | `pnpm build:v2` | Build v2 server and MCP Apps |
+| `pnpm build:v2:inspector` | Build v2 with the production inspector enabled |
 | `pnpm run:v2` / `pnpm start:v2` | Run v2 in the foreground / background |
 | `pnpm status:v2` / `pnpm stop:v2` | List / stop recorded v2 workers |
 | `pnpm console` | Build + start the worker console in the **background** (port 8790) |

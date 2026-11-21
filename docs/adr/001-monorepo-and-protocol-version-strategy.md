@@ -14,7 +14,7 @@ commands are documented in the README; the future commands and environment overr
 were proposals, not the implemented interface. Modern clients use 2026-07-28 per-request
 metadata and multi-round-trip requests. Legacy session-dependent roots, elicitation and
 sampling are not equivalent to v1; use v1 when those interactions or stdio are needed.
-The v2 production build also does not include the v1 embedded inspector.
+The production inspector can be enabled separately for each runtime, including v2.
 
 The remainder records the original decision and its context.
 
