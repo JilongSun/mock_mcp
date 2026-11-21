@@ -151,8 +151,8 @@ const DICT = {
     en: "The worker is not running — start it to open the inspector",
   },
   "inspector.disabledNotBuilt": {
-    zh: "当前构建未包含调试台 —— 执行 pnpm build:v1:inspector 后重启 worker",
-    en: "This build has no inspector — run pnpm build:v1:inspector, then restart the worker",
+    zh: "当前构建未包含调试台 —— 执行 pnpm build:{runtime}:inspector 后重启 worker",
+    en: "This build has no inspector — run pnpm build:{runtime}:inspector, then restart the worker",
   },
   "inspector.loading": { zh: "正在连接 worker…", en: "Connecting to the worker…" },
   "inspector.notRunning": {
@@ -160,8 +160,8 @@ const DICT = {
     en: "The worker is not running — start it before opening the inspector.",
   },
   "inspector.notBuilt": {
-    zh: "当前构建未包含调试台。执行 pnpm build:v1:inspector 重新构建，然后重启该 worker 即可启用。",
-    en: "This build does not include the inspector. Run pnpm build:v1:inspector, then restart the worker.",
+    zh: "当前构建未包含调试台。执行 pnpm build:{runtime}:inspector 重新构建，然后重启该 worker 即可启用。",
+    en: "This build does not include the inspector. Run pnpm build:{runtime}:inspector, then restart the worker.",
   },
   "inspector.unreachable": {
     zh: "无法连接到该 worker 的调试台。",

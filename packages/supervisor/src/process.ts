@@ -8,7 +8,7 @@ import fs from "node:fs";
 import net from "node:net";
 import { isWildcardHost, resolveMcpUrl } from "./network.js";
 import { ensureRunDirs } from "./paths.js";
-import { resolveRuntimeCommand, type ResolvedRuntime } from "./runtimes.js";
+import { isInspectorBuilt, resolveRuntimeCommand, type ResolvedRuntime } from "./runtimes.js";
 
 export const STOP_TIMEOUT_MS = 8_000;
 const POLL_INTERVAL_MS = 100;
@@ -245,7 +245,7 @@ export function spawnDetachedWorker(
   const fd = fs.openSync(opts.logFile, "a");
 
   try {
-    const child = spawn(cmd, [...args, "start", "--port", String(opts.port)], {
+    const child = spawn(cmd, [...args, ...workerStartArgs(runtime, opts.port)], {
       cwd: runtime.packagePath,
       env: workerEnv(opts.port, opts.host),
       detached: true,
@@ -273,12 +273,17 @@ export function spawnForegroundWorker(
   host: string,
 ): ChildProcess {
   const { cmd, args, shell } = resolveRuntimeCommand(runtime);
-  return spawn(cmd, [...args, "start", "--port", String(port)], {
+  return spawn(cmd, [...args, ...workerStartArgs(runtime, port)], {
     cwd: runtime.packagePath,
     env: workerEnv(port, host),
     stdio: "inherit",
     shell,
   });
+}
+
+function workerStartArgs(runtime: ResolvedRuntime, port: number): string[] {
+  const flag = runtime.inspector.startFlag;
+  return ["start", "--port", String(port), ...(flag && isInspectorBuilt(runtime.id, true) ? [flag] : [])];
 }
 
 export interface TerminateResult {

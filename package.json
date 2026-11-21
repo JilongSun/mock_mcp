@@ -14,6 +14,7 @@
     "status:v1": "pnpm --filter @mock-mcp/v1 run status",
     "dev:v2": "pnpm --filter @mock-mcp/v2 dev",
     "build:v2": "pnpm --filter @mock-mcp/v2 build",
+    "build:v2:inspector": "pnpm --filter @mock-mcp/v2 run build:inspector",
     "run:v2": "pnpm --filter @mock-mcp/v2 run run",
     "start:v2": "pnpm --filter @mock-mcp/v2 run start",
     "stop:v2": "pnpm --filter @mock-mcp/v2 run stop",

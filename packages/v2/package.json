@@ -12,6 +12,8 @@
     "dev": "mcp-use dev --port 8770",
     "prebuild": "pnpm --filter @mock-mcp/shared build && pnpm --filter @mock-mcp/supervisor build",
     "build": "mcp-use build",
+    "prebuild:inspector": "pnpm --filter @mock-mcp/shared build && pnpm --filter @mock-mcp/supervisor build",
+    "build:inspector": "mcp-use build && node -e \"require('node:fs').writeFileSync('.mcp-use/build/inspector.json', JSON.stringify({ includeInspector: true }))\"",
     "prerun": "pnpm --filter @mock-mcp/shared build && pnpm --filter @mock-mcp/supervisor build",
     "run": "tsx cli.ts run",
     "prestart": "pnpm --filter @mock-mcp/shared build && pnpm --filter @mock-mcp/supervisor build",
@@ -19,8 +21,8 @@
     "stop": "tsx cli.ts stop",
     "status": "tsx cli.ts status",
     "typecheck": "mcp-use typecheck",
-    "pretest": "pnpm run build",
-    "test": "node --test tests/*.test.mjs"
+    "pretest": "pnpm run build:inspector",
+    "test": "node --test --test-concurrency=1 tests/*.test.mjs"
   },
   "dependencies": {
     "@mock-mcp/shared": "workspace:*",

@@ -152,7 +152,7 @@ export function WorkerTable({
                             !worker.listening
                               ? t("inspector.disabledNotRunning")
                               : !worker.inspectorBuilt
-                                ? t("inspector.disabledNotBuilt")
+                                ? t("inspector.disabledNotBuilt", { runtime: worker.runtime })
                                 : undefined
                           }
                         >

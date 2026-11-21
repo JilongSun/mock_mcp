@@ -29,6 +29,12 @@ export interface WorkerRuntimeSpec {
   /** Workspace-relative directory owning the server; used as the spawn cwd. */
   packageDir: string;
   defaultPort: number;
+  inspector: {
+    path: string;
+    serverParam: string;
+    manifest: string;
+    startFlag?: string;
+  };
   /** Reserved: capability groups a worker may be started with. */
   capabilities: CapabilitySpec[];
   /** Reserved: protocol eras a worker may be started with. */
@@ -48,6 +54,7 @@ const RUNTIME_SPECS: WorkerRuntimeSpec[] = [
       "Enterprise Operations Hub on the pinned mcp-use 1.x runtime (SEP-1865 widgets).",
     packageDir: "packages/v1",
     defaultPort: 8760,
+    inspector: { path: "/inspector", serverParam: "autoConnect", manifest: "dist/mcp-use.json" },
     capabilities: [],
     protocols: [],
   },
@@ -57,6 +64,12 @@ const RUNTIME_SPECS: WorkerRuntimeSpec[] = [
     description: "MCP 2026 runtime with stateless legacy compatibility and MCP Apps.",
     packageDir: "packages/v2",
     defaultPort: 8770,
+    inspector: {
+      path: "/mcp/inspector",
+      serverParam: "server",
+      manifest: ".mcp-use/build/inspector.json",
+      startFlag: "--with-inspector",
+    },
     capabilities: [],
     protocols: [],
   },
@@ -78,17 +91,17 @@ export function getRuntime(id: string): ResolvedRuntime | undefined {
 /**
  * Whether a runtime's current build includes the MCP inspector.
  *
- * Read from the build manifest written by `mcp-use build --with-inspector`.
+ * Read from the runtime's inspector build manifest.
  * Cached briefly: a rebuild flips this, but not often enough to read the file
  * on every status poll.
  */
 const INSPECTOR_BUILD_TTL_MS = 10_000;
 const inspectorBuiltCache = new Map<string, { value: boolean; at: number }>();
 
-export function isInspectorBuilt(runtimeId: string): boolean {
+export function isInspectorBuilt(runtimeId: string, fresh = false): boolean {
   const cached = inspectorBuiltCache.get(runtimeId);
   const now = Date.now();
-  if (cached !== undefined && now - cached.at < INSPECTOR_BUILD_TTL_MS) {
+  if (!fresh && cached !== undefined && now - cached.at < INSPECTOR_BUILD_TTL_MS) {
     return cached.value;
   }
 
@@ -97,7 +110,7 @@ export function isInspectorBuilt(runtimeId: string): boolean {
   if (runtime !== undefined) {
     try {
       const manifest = JSON.parse(
-        fs.readFileSync(path.join(runtime.packagePath, "dist", "mcp-use.json"), "utf8"),
+        fs.readFileSync(path.join(runtime.packagePath, runtime.inspector.manifest), "utf8"),
       ) as { includeInspector?: boolean };
       value = manifest.includeInspector === true;
     } catch {

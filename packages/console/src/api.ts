@@ -11,6 +11,7 @@ import {
   accessUrls,
   findFreePort,
   getRegistryHealth,
+  getRuntime,
   isAllowedHost,
   isLoopbackHost,
   listLanAddresses,
@@ -193,15 +194,13 @@ function requestHostname(req: IncomingMessage): string {
 const INSPECTOR_PROBE_TIMEOUT_MS = 1_500;
 
 /**
- * Whether the worker serves `/inspector`. The inspector is part of the worker
- * build (`--with-inspector`), so a worker built without it answers 404 — that
- * must be reported instead of embedding a broken frame.
+ * Probe the runtime-specific inspector path before embedding it.
  */
-async function probeInspector(port: number): Promise<boolean> {
+async function probeInspector(port: number, path: string): Promise<boolean> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), INSPECTOR_PROBE_TIMEOUT_MS);
   try {
-    const response = await fetch(`http://${LOOPBACK_HOST}:${port}/inspector`, {
+    const response = await fetch(`http://${LOOPBACK_HOST}:${port}${path}`, {
       signal: controller.signal,
     });
     if (!response.ok) return false;
@@ -220,7 +219,8 @@ async function inspectorPayload(id: string, req: IncomingMessage): Promise<Inspe
     return { workerId: id, available: false, url: null, mcpUrl: null, reason: "not-running" };
   }
 
-  if (!(await probeInspector(view.port))) {
+  const runtime = getRuntime(view.runtime);
+  if (!runtime || !(await probeInspector(view.port, runtime.inspector.path))) {
     return { workerId: id, available: false, url: null, mcpUrl: null, reason: "not-built" };
   }
 
@@ -241,9 +241,7 @@ async function inspectorPayload(id: string, req: IncomingMessage): Promise<Inspe
 
   const targetHost = consoleIsLocal ? LOOPBACK_HOST : viewHost;
   const mcpUrl = `http://${targetHost}:${view.port}/mcp`;
-  // `autoConnect` overrides the loopback-only URL baked into the worker's
-  // config.json, so a remote browser connects to the right host.
-  const url = `http://${targetHost}:${view.port}/inspector?autoConnect=${encodeURIComponent(mcpUrl)}`;
+  const url = `http://${targetHost}:${view.port}${runtime.inspector.path}?${runtime.inspector.serverParam}=${encodeURIComponent(mcpUrl)}`;
 
   return { workerId: id, available: true, url, mcpUrl, reason: null };
 }

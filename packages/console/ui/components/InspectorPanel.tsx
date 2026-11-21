@@ -16,7 +16,7 @@ type State =
   | { status: "error"; message: string };
 
 /**
- * Full-screen MCP inspector, embedded from the worker's own `/inspector`.
+ * Full-screen MCP inspector, embedded from the worker.
  *
  * The URL comes from the API rather than being built here: it must match the
  * host the browser used to reach the console, otherwise a remote browser would
@@ -91,7 +91,7 @@ export function InspectorPanel({ worker, onClose }: InspectorPanelProps) {
         <div className="flex flex-1 items-center justify-center px-6">
           <div className="card max-w-lg px-6 py-8 text-center">
             <p className="text-[12.5px] leading-relaxed text-ink-soft">
-              {t(REASON_TEXT[unavailable.reason ?? "unreachable"])}
+              {t(REASON_TEXT[unavailable.reason ?? "unreachable"], { runtime: worker.runtime })}
             </p>
           </div>
         </div>
