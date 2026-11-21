@@ -27,6 +27,21 @@ mock_mcp/
 
 ## Quick Start
 
+To build all packages with both production inspectors and manage the console
+(Node.js >= 22.22.2 is required for v2):
+
+```bash
+pnpm install
+make build        # or just make
+make start        # start the console in the background
+make stop         # stop the console; workers keep running
+```
+
+Open [http://127.0.0.1:8790](http://127.0.0.1:8790) and create workers in the
+console. Building does not restart workers that are already running.
+
+For development:
+
 ```bash
 pnpm install
 pnpm dev:v1       # Run the SEP-1865 MCP Apps server

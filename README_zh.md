@@ -27,6 +27,20 @@ mock_mcp/
 
 ## 快速开始
 
+构建所有包及两个生产调试台，并管理控制台（v2 需要 Node.js >= 22.22.2）：
+
+```bash
+pnpm install
+make build        # 或直接运行 make
+make start        # 在后台启动控制台
+make stop         # 停止控制台；worker 继续运行
+```
+
+打开 [http://127.0.0.1:8790](http://127.0.0.1:8790)，在控制台中创建 worker。
+构建不会自动重启已运行的 worker。
+
+开发模式：
+
 ```bash
 pnpm install
 pnpm dev:v1       # 运行 SEP-1865 MCP Apps 服务器
