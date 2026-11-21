@@ -51,12 +51,10 @@ const RUNTIME_SPECS: WorkerRuntimeSpec[] = [
     capabilities: [],
     protocols: [],
   },
-  // Declared ahead of the implementation — see docs/adr/001. Skipped until the
-  // package exists, at which point it shows up in the console automatically.
   {
     id: "v2",
     label: "v2 · mcp-use 2.x",
-    description: "Modern MCP protocol era with legacy negotiation. Not implemented yet.",
+    description: "MCP 2026 runtime with stateless legacy compatibility and MCP Apps.",
     packageDir: "packages/v2",
     defaultPort: 8770,
     capabilities: [],

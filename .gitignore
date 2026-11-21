@@ -5,6 +5,7 @@ node_modules/
 # Build output
 dist/
 .mcp-use/
+packages/v2/mcp-env.d.ts
 .vite/
 
 # Local runtime state (background process records & logs)
