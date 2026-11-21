@@ -6,6 +6,20 @@
 
 ---
 
+## Implementation update
+
+The deferred v2 runtime has now been implemented with `mcp-use@2.10.0`, shared mock
+data, stateless legacy HTTP compatibility, and four tool-bound MCP Apps views. Its actual
+commands are documented in the README; the future commands and environment override below
+were proposals, not the implemented interface. Modern clients use 2026-07-28 per-request
+metadata and multi-round-trip requests. Legacy session-dependent roots, elicitation and
+sampling are not equivalent to v1; use v1 when those interactions or stdio are needed.
+The v2 production build also does not include the v1 embedded inspector.
+
+The remainder records the original decision and its context.
+
+---
+
 ## Context
 
 This project is a **mock MCP server** designed to test MCP bridges (specifically [mcpapps-bridge](https://github.com)) and MCP clients against different protocol versions. It simulates an enterprise operations platform with 17 tools, 9 resources, and 3 prompts — all backed by static mock data.

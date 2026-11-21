@@ -16,7 +16,8 @@ mock_mcp/
 │   ├── shared/        # @mock-mcp/shared     — mock 数据与工具函数
 │   ├── supervisor/    # @mock-mcp/supervisor — worker 注册表与生命周期
 │   ├── console/       # @mock-mcp/console    — 多 worker 管理控制台
-│   └── v1/            # @mock-mcp/v1         — mcp-use@1.32.1 服务器
+│   ├── v1/            # @mock-mcp/v1         — mcp-use@1.32.1 服务器
+│   └── v2/            # @mock-mcp/v2         — mcp-use@2.10.0 服务器
 ├── public/            # 静态资源
 ├── docs/              # 工具参考、能力文档与 ADR
 └── README.md
@@ -32,6 +33,16 @@ pnpm dev:v1       # 运行 SEP-1865 MCP Apps 服务器
 ```
 
 打开 [http://localhost:8760/inspector](http://localhost:8760/inspector) 即可交互式地浏览工具、资源和小组件。
+
+启动 MCP 2026-07-28 运行时（需要 Node.js >= 22.22.2）：
+
+```bash
+pnpm dev:v2
+```
+
+打开 [http://localhost:8770/mcp/inspector](http://localhost:8770/mcp/inspector)。
+v2 包含四个绑定工具的 MCP Apps：用户搜索、订单列表、位置地图和交互式订单管理器。
+v2 生产构建不包含调试台。
 
 `manage-orders` 会打开**订单管理器（Order Manager）**小组件，其按钮回调一个独立的、widget 内部专用的
 辅助工具 `apply-order-action`（`action: "update-status"` 或 `action: "undo"`）。把两者分开，启动器就能保持
@@ -63,13 +74,16 @@ pnpm start:v1
 
 # 查看与停止后台 worker
 pnpm status:v1
-pnpm stop:v1                    # 停止全部已记录的 worker
+pnpm stop:v1                    # 仅停止已记录的 v1 worker
 pnpm stop:v1 -- --port 8760     # 只停止该端口上的 worker
 ```
 
 后台记录保存在仓库根目录的 `.run/`（已在 `.gitignore` 中）：`workers.json` 存放端口/PID
 记录，`logs/` 每个 worker 一个日志文件。该注册表与
 [Worker 控制台](#worker-控制台) 共用，因此终端启动的 worker 会出现在控制台里，反之亦然。
+
+v2 同样支持 `run:v2`、`start:v2`、`status:v2` 和 `stop:v2`，默认端口为 `8770`。
+状态和停止命令只作用于所选运行时。
 
 `start` 会等待服务**真正绑定端口**后才报告成功 —— 冷启动需要 ~10–20 秒，期间
 `mcp-use` 不输出任何日志，若立刻报成功会非常误导。如果 worker 退出或始终没有绑定端口，
@@ -146,13 +160,14 @@ pnpm build:v1:inspector
 
 ### 内置调试台（可选）
 
-每个 worker 行上都有 **调试台** 按钮，点击后在控制台内整屏打开该 worker 自带的 MCP 调试台，
+v1 的 worker 行上有 **调试台** 按钮，点击后在控制台内整屏打开该 worker 自带的 MCP 调试台，
 并且已经自动连接好它的 `/mcp` —— 可以直接浏览、调用工具，查看 resources 与 prompts，不必离开
 控制台。
 
 调试台依赖较大，**默认不包含在构建里**。需要用 `pnpm build:v1:inspector`（代替
 `pnpm build:v1`）重新构建一次并重启 worker；在此之前面板会明确提示该执行什么命令。该开关记录在
 构建清单里，同一运行时的所有 worker 共用一份，所以这是「按构建」而非「按 worker」的选择。
+v2 生产运行时不提供此内嵌调试台；请使用 `dev:v2` 调试。
 
 控制台与后台 worker 一样是 detached 的：PID/端口记录在 `.run/console.json`，日志写入
 `.run/logs/console-<port>.log`，关闭终端不会停止它。
@@ -166,8 +181,8 @@ worker 仍在运行并监听 —— 因为 worker 是 detached 启动的，控�
   开销很低；没有页面打开时不产生任何轮询。
 - **不会自动重启** worker。崩溃或卡死的 worker 只会上报，重启需要手动点击。
 - 控制台默认只绑定回环地址。`--host 0.0.0.0` 可让局域网访问，并会打印可直接分发的 URL。
-- 新增 worker 默认自动分配空闲端口（从运行时默认端口向下查找）。详情面板中已经预留了
-  （尚未启用的）per-worker capability 与 MCP v1/v2 选择字段。
+- 新增 worker 默认自动分配空闲端口（从所选运行时的默认端口向下查找）。
+  per-worker capability 与协议覆盖字段尚未启用。
 
 完整 API、端口与内部实现见 [`docs/worker-console_zh.md`](./docs/worker-console_zh.md)
 （[English](./docs/worker-console.md)）。
@@ -185,6 +200,10 @@ worker 仍在运行并监听 —— 因为 worker 是 detached 启动的，控�
 | `pnpm start:v1` | v1 **后台**运行（关闭终端后仍继续） |
 | `pnpm status:v1` | 列出已记录的后台 worker |
 | `pnpm stop:v1` | 停止后台 worker —— 默认全部关闭 |
+| `pnpm dev:v2` | v2 开发服务器与调试台（端口 8770） |
+| `pnpm build:v2` | 构建 v2 服务器和 MCP Apps |
+| `pnpm run:v2` / `pnpm start:v2` | v2 前台 / 后台运行 |
+| `pnpm status:v2` / `pnpm stop:v2` | 查看 / 停止已记录的 v2 worker |
 | `pnpm console` | 构建并**后台**启动 Worker 控制台（端口 8790） |
 | `pnpm console:run` | Worker 控制台**前台**运行（Ctrl+C 停止） |
 | `pnpm console:status` | 查看后台控制台及其服务状态 |
@@ -212,7 +231,7 @@ worker 仍在运行并监听 —— 因为 worker 是 detached 启动的，控�
 
 ### stdio 模式
 
-小组件（`ui://widget/*`）仅支持 HTTP。其余所有能力——工具、静态资源、提示词、elicitation、sampling、roots、progress、logging——均可通过 stdio 使用。
+v1 的小组件（`ui://widget/*`）仅支持 HTTP，其余能力可通过 stdio 使用：
 
 ```json
 {
@@ -226,6 +245,11 @@ worker 仍在运行并监听 —— 因为 worker 是 detached 启动的，控�
 }
 ```
 
+v2 当前仅提供 HTTP。新客户端需在每次请求中携带协议版本和客户端元数据，roots、
+elicitation、sampling 使用多轮请求。旧 HTTP 客户端可通过无状态兼容模式初始化并使用工具、
+资源、提示词和 MCP Apps；但 v2 SDK 不保存旧客户端的会话能力，因此即使客户端声明支持，
+roots、elicitation 和 sampling 仍可能被报告为不支持。需要这些旧版交互或 stdio 时请使用 v1。
+
 ---
 
 ## 运行时与构建策略
@@ -238,6 +262,7 @@ worker 仍在运行并监听 —— 因为 worker 是 detached 启动的，控�
 - `@mock-mcp/supervisor` 构建到 `packages/supervisor/dist`；v1 CLI 与控制台都引入它，因此 worker 的启停与状态在终端和 UI 中行为完全一致。
 - `@mock-mcp/console` 的 UI 构建到 `packages/console/dist/ui`；服务端本身通过 `tsx` 直接运行 TypeScript。
 - `@mock-mcp/v1` 将服务器与小组件构建到 `packages/v1/dist`。
+- `@mock-mcp/v2` 将服务器与视图构建到 `packages/v2/.mcp-use/build`。
 
 保持这些产物位于各自的包内，可以确保 Node 的包导出解析正常工作。根包负责编排构建，但不会把各自独立版本化的 workspace 包扁平化输出到共享的根 `dist`。
 

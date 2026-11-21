@@ -16,7 +16,8 @@ mock_mcp/
 │   ├── shared/        # @mock-mcp/shared     — mock data & utilities
 │   ├── supervisor/    # @mock-mcp/supervisor — worker registry & lifecycle
 │   ├── console/       # @mock-mcp/console    — multi-worker web console
-│   └── v1/            # @mock-mcp/v1         — mcp-use@1.32.1 server
+│   ├── v1/            # @mock-mcp/v1         — mcp-use@1.32.1 server
+│   └── v2/            # @mock-mcp/v2         — mcp-use@2.10.0 server
 ├── public/            # Static assets
 ├── docs/              # Tool reference, capability docs & ADRs
 └── README.md
@@ -32,6 +33,16 @@ pnpm dev:v1       # Run the SEP-1865 MCP Apps server
 ```
 
 Open [http://localhost:8760/inspector](http://localhost:8760/inspector) to explore tools, resources, and widgets interactively.
+
+For the MCP 2026-07-28 runtime (requires Node.js >= 22.22.2):
+
+```bash
+pnpm dev:v2
+```
+
+Open [http://localhost:8770/mcp/inspector](http://localhost:8770/mcp/inspector).
+The v2 server includes the four tool-bound MCP Apps: user search, orders, locations and
+the interactive order manager. Its production build does not include an inspector.
 
 `manage-orders` opens the **Order Manager** widget, whose buttons call a separate widget-internal
 helper, `apply-order-action` (`action: "update-status"` or `action: "undo"`). Keeping the two apart
@@ -65,7 +76,7 @@ pnpm start:v1
 
 # Inspect & stop background workers
 pnpm status:v1
-pnpm stop:v1                    # stops EVERY recorded worker
+pnpm stop:v1                    # stops recorded v1 workers only
 pnpm stop:v1 -- --port 8760     # stops only the worker on that port
 ```
 
@@ -73,6 +84,9 @@ Background records live in the repository-root `.run/` directory (git-ignored): 
 holds the port/PID records, `logs/` holds one log file per worker. The same registry is shared
 with the [worker console](#worker-console), so workers started in a terminal show up there and
 vice versa.
+
+The same commands are available as `run:v2`, `start:v2`, `status:v2`, and `stop:v2`;
+v2 defaults to port `8770`. Status and stop are scoped to the selected runtime.
 
 `start` waits for the server to **actually bind its port** before reporting success —
 cold boot takes ~10–20s and `mcp-use` prints nothing in the meantime, so an
@@ -153,7 +167,7 @@ pnpm build:v1:inspector
 
 ### Built-in inspector (optional)
 
-Every worker row has an **Inspector** button that opens the worker's own MCP inspector in a
+For v1, each worker row has an **Inspector** button that opens the worker's own MCP inspector in a
 full-screen panel, already connected to that worker's `/mcp` — browse tools, call them, inspect
 resources and prompts without leaving the console.
 
@@ -161,6 +175,7 @@ The inspector is a large dependency tree, so it is **not** part of the default b
 with `pnpm build:v1:inspector` (instead of `pnpm build:v1`) and restart the workers; until then the
 panel explains exactly what to run. The flag lives in the build manifest, which all workers of a
 runtime share, so this is a per-build choice rather than a per-worker one.
+The production v2 runtime does not provide this embedded inspector; use `dev:v2` for inspection.
 
 The console is detached exactly like a background worker: it records its PID/port in
 `.run/console.json`, logs to `.run/logs/console-<port>.log`, and closing the terminal does not stop
@@ -178,9 +193,8 @@ detached and the console holds no process handles. Stop workers with `pnpm stop:
   deliberate click.
 - The console binds loopback by default. `--host 0.0.0.0` makes it reachable from the LAN and prints
   the exact URLs to hand out.
-- New workers default to an automatically allocated free port, counting down from the runtime's
-  default port. The worker detail panel already carries the (not yet active) fields for
-  per-worker capabilities and MCP v1/v2 selection.
+- New workers default to an automatically allocated free port, counting down from the selected
+  runtime's default port. Per-worker capability and protocol override fields are not yet active.
 
 Full API reference, ports and internals: [`docs/worker-console.md`](./docs/worker-console.md)
 ([简体中文](./docs/worker-console_zh.md)).
@@ -198,6 +212,10 @@ Full API reference, ports and internals: [`docs/worker-console.md`](./docs/worke
 | `pnpm start:v1` | v1 server in the **background** (survives closing the terminal) |
 | `pnpm status:v1` | List recorded background worker(s) |
 | `pnpm stop:v1` | Stop background worker(s) — all of them by default |
+| `pnpm dev:v2` | v2 development server and inspector (port 8770) |
+| `pnpm build:v2` | Build v2 server and MCP Apps |
+| `pnpm run:v2` / `pnpm start:v2` | Run v2 in the foreground / background |
+| `pnpm status:v2` / `pnpm stop:v2` | List / stop recorded v2 workers |
 | `pnpm console` | Build + start the worker console in the **background** (port 8790) |
 | `pnpm console:run` | Worker console in the **foreground** (Ctrl+C stops it) |
 | `pnpm console:status` | Show the background console and whether it is serving |
@@ -225,7 +243,7 @@ Add `-- --workers N` to `start:v1` for multi-worker background mode.
 
 ### stdio Mode
 
-Widgets (`ui://widget/*`) are HTTP-only. All other capabilities — tools, static resources, prompts, elicitation, sampling, roots, progress, logging — are available over stdio.
+For v1, widgets (`ui://widget/*`) are HTTP-only. Its other capabilities are available over stdio:
 
 ```json
 {
@@ -239,6 +257,13 @@ Widgets (`ui://widget/*`) are HTTP-only. All other capabilities — tools, stati
 }
 ```
 
+The v2 runtime currently provides HTTP only. Modern clients send protocol version and client
+metadata on each request and use multi-round-trip requests for roots, elicitation and sampling.
+Older HTTP clients can initialize and use tools, resources, prompts and MCP Apps through stateless
+compatibility. Unlike v1, the v2 SDK does not retain legacy client capabilities per session:
+legacy roots, elicitation and sampling may be reported unsupported even when advertised.
+Use v1 when those legacy interactions or stdio are required.
+
 ---
 
 ## Runtime and Build Strategy
@@ -251,6 +276,7 @@ Each workspace package owns its compiled output:
 - `@mock-mcp/supervisor` builds to `packages/supervisor/dist`; both the `v1` CLI and the console import it, so worker start/stop/status behaves identically in a terminal and in the UI.
 - `@mock-mcp/console` builds its UI to `packages/console/dist/ui`; the server itself runs from TypeScript via `tsx`.
 - `@mock-mcp/v1` builds the server and widgets to `packages/v1/dist`.
+- `@mock-mcp/v2` builds the server and views to `packages/v2/.mcp-use/build`.
 
 Keeping these outputs package-local preserves Node package export resolution. The root package orchestrates builds but does not flatten independently versioned workspace packages into a shared root `dist`.
 

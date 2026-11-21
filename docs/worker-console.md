@@ -44,7 +44,7 @@ console (detached) ──spawn──▶ worker A (detached, survives the console
   `ChildProcess` handle — only numeric PIDs in the registry.
 - Therefore **stopping the console never stops a worker**: `pnpm console:stop`, `Ctrl+C` on a
   foreground console, or killing the console all leave workers running and listening.
-- Stop workers with `pnpm stop:v1` or the UI's Stop/Remove buttons.
+- Stop workers with `pnpm stop:v1` or `pnpm stop:v2` for the corresponding runtime, or the UI's Stop/Remove buttons.
 - The reverse also holds: workers started by `pnpm start:v1` are managed by the console as soon as
   it starts, because both read the same `.run/workers.json`.
 
@@ -201,15 +201,18 @@ reimplemented:
 | `pnpm run:v1` (foreground, attached) | not managed — a foreground instance is owned by its terminal |
 
 The foreground `run` command stays exactly as it was: the console manages background (detached)
-workers only.
+workers only. The same CLI commands are available for v2; status and stop affect only the
+selected runtime, while the console displays both.
 
 ---
 
 ## Inspector integration
 
-Each worker row links to an embedded MCP inspector. The console does not run it: the worker serves
+For v1, each worker row links to an embedded MCP inspector. The console does not run it: the worker serves
 `/inspector` from its own build, and the console embeds it full-screen and passes
 `?autoConnect=<worker>/mcp` so it is connected the moment it opens.
+The v2 production build does not provide an embedded inspector; use `pnpm dev:v2` and open
+`http://localhost:8770/mcp/inspector` instead.
 
 ```bash
 pnpm build:v1:inspector   # instead of pnpm build:v1
@@ -268,9 +271,8 @@ The next two features on this console are already prepared:
 
 1. **Per-worker capabilities** — choose which capability groups a worker starts with
    (`capabilities: []` currently means "runtime default = all").
-2. **Protocol version per worker** — MCP v1 vs v2 (`protocol: null` currently means "decided by the
-   runtime"). `packages/v2` is declared in `@mock-mcp/supervisor` already; it appears in the runtime
-   list automatically once the package exists.
+2. **Protocol override per worker** — `protocol: null` currently means "decided by the
+   runtime". The runtime selector already offers the implemented v1 and v2 packages.
 
 ---
 

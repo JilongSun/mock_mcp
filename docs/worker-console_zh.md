@@ -42,7 +42,7 @@ console (detached) ──spawn──▶ worker A (detached，控制台退出后�
   只有数字 PID。
 - 因此**停止控制台绝不会停止 worker**：`pnpm console:stop`、前台控制台按 `Ctrl+C`、甚至直接
   kill 掉控制台，worker 都会继续运行并监听端口。
-- 停止 worker 请用 `pnpm stop:v1` 或界面上的停止/移除按钮。
+- 停止 worker 请按运行时使用 `pnpm stop:v1`、`pnpm stop:v2` 或界面上的停止/移除按钮。
 - 反过来同样成立：`pnpm start:v1` 启动的 worker，控制台一启动就能管理，因为二者读的是同一份
   `.run/workers.json`。
 
@@ -187,14 +187,17 @@ curl -s "http://127.0.0.1:8790/api/workers/w-8760/logs?lines=50"
 | `pnpm stop:v1` | 停止 / 移除 |
 | `pnpm run:v1`（前台、附着终端） | 不纳入管理 —— 前台实例归它的终端所有 |
 
-前台 `run` 命令保持原样：控制台只管理后台（detached）worker。
+前台 `run` 命令保持原样：控制台只管理后台（detached）worker。v2 也提供相同的 CLI
+命令；状态和停止命令只作用于所选运行时，控制台则展示两者。
 
 ---
 
 ## 调试台集成
 
-每个 worker 行都可以打开内嵌的 MCP 调试台。调试台不由控制台运行：worker 自己的构建里带上
+v1 worker 行可以打开内嵌的 MCP 调试台。调试台不由控制台运行：worker 自己的构建里带上
 `/inspector`，控制台整屏嵌入它，并传入 `?autoConnect=<worker>/mcp`，打开即已连接。
+v2 生产构建不提供内嵌调试台；请运行 `pnpm dev:v2`，访问
+`http://localhost:8770/mcp/inspector`。
 
 ```bash
 pnpm build:v1:inspector   # 用它代替 pnpm build:v1
@@ -244,8 +247,8 @@ pnpm build:v1:inspector   # 用它代替 pnpm build:v1
 
 1. **per-worker capability** —— 选择 worker 启动时启用哪些能力组（当前 `capabilities: []` 表示
    “运行时默认，即全部”）。
-2. **per-worker 协议版本** —— MCP v1 与 v2 二选一（当前 `protocol: null` 表示“由运行时决定”）。
-   `@mock-mcp/supervisor` 中已经声明了 `packages/v2`，一旦该包存在就会自动出现在运行时列表里。
+2. **per-worker 协议覆盖** —— 当前 `protocol: null` 表示“由运行时决定”。
+   运行时选择器已经提供实现好的 v1 和 v2 包。
 
 ---
 
