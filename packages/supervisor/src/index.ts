@@ -14,6 +14,8 @@ export type {
   WorkerView,
 } from "./types.js";
 
+export { runWorkerCli } from "./cli.js";
+
 export {
   ALLOWED_HOSTS,
   LOOPBACK_HOST,
