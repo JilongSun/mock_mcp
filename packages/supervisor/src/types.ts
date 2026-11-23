@@ -37,7 +37,7 @@ export interface WorkerRecord {
   /** Workers started together share a group (and its log naming convention). */
   groupId: string;
   logFile: string;
-  /** Reserved: empty array means "all capabilities". */
+  /** Enabled capability ids; `[]` means none were enabled for this worker. */
   capabilities: string[];
   /** Reserved: protocol selection for this worker. */
   protocol: WorkerProtocol | null;

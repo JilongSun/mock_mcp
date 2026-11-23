@@ -40,6 +40,7 @@ import {
   getRuntime,
   isInspectorBuilt,
   listRuntimes,
+  resolveCapabilities,
   type ResolvedRuntime,
 } from "./runtimes.js";
 import type {
@@ -81,9 +82,21 @@ export interface StartWorkerOptions {
   /** Bind address; defaults to loopback. */
   host?: string;
   name?: string;
+  /** Enabled capability ids; empty keeps the runtime defaults. */
   capabilities?: string[];
   protocol?: WorkerProtocol | null;
   groupId?: string;
+}
+
+function resolveRequestedCapabilities(
+  runtime: ResolvedRuntime,
+  requested: readonly string[] | undefined,
+): string[] {
+  try {
+    return resolveCapabilities(runtime, requested);
+  } catch (err) {
+    throw new SupervisorError("UNKNOWN_CAPABILITY", (err as Error).message, 400);
+  }
 }
 
 function requireRuntime(id: string): ResolvedRuntime {
@@ -127,6 +140,7 @@ export async function startWorker(options: StartWorkerOptions): Promise<WorkerRe
   const runtime = requireRuntime(options.runtime);
   assertPort(options.port);
   const host = requireHost(options.host);
+  const capabilities = resolveRequestedCapabilities(runtime, options.capabilities);
 
   const existing = getWorker(workerIdFor(options.port));
   if (existing) {
@@ -163,7 +177,7 @@ export async function startWorker(options: StartWorkerOptions): Promise<WorkerRe
     desiredState: "running",
     groupId: options.groupId ?? groupIdFor(1, options.port),
     logFile: logFileFor(id),
-    capabilities: options.capabilities ?? [],
+    capabilities,
     protocol: options.protocol ?? null,
   };
 
@@ -171,6 +185,7 @@ export async function startWorker(options: StartWorkerOptions): Promise<WorkerRe
     port: record.port,
     host: record.host,
     logFile: record.logFile,
+    capabilities: record.capabilities,
   });
   invalidatePortOwnership(record.port);
   return upsertWorker(record);
@@ -360,6 +375,7 @@ export async function restartWorker(id: string): Promise<WorkerRecord> {
     port: record.port,
     host: record.host,
     logFile: record.logFile,
+    capabilities: record.capabilities,
   });
   invalidatePortOwnership(record.port);
 
@@ -407,6 +423,7 @@ export async function startRecordedWorker(id: string): Promise<WorkerRecord> {
     port: record.port,
     host: record.host,
     logFile: record.logFile,
+    capabilities: record.capabilities,
   });
   invalidatePortOwnership(record.port);
 

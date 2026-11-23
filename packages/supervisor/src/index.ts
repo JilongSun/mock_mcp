@@ -56,9 +56,11 @@ export {
 } from "./registry.js";
 
 export {
+  capabilityEnv,
   getRuntime,
   isInspectorBuilt,
   listRuntimes,
+  resolveCapabilities,
   resolveRuntimeCommand,
   type CapabilitySpec,
   type ProtocolSpec,

@@ -13,7 +13,13 @@ import { WORKSPACE_ROOT } from "./paths.js";
 export interface CapabilitySpec {
   id: string;
   label: string;
+  /** Shown in the console next to the option. */
+  description?: string;
   defaultEnabled: boolean;
+  /** Environment variables applied when the capability is enabled. */
+  env?: Record<string, string>;
+  /** Environment variables applied when it is disabled. */
+  envDisabled?: Record<string, string>;
 }
 
 export interface ProtocolSpec {
@@ -35,7 +41,7 @@ export interface WorkerRuntimeSpec {
     manifest: string;
     startFlag?: string;
   };
-  /** Reserved: capability groups a worker may be started with. */
+  /** Capability groups a worker may be started with. */
   capabilities: CapabilitySpec[];
   /** Reserved: protocol eras a worker may be started with. */
   protocols: ProtocolSpec[];
@@ -70,10 +76,54 @@ const RUNTIME_SPECS: WorkerRuntimeSpec[] = [
       manifest: ".mcp-use/build/inspector.json",
       startFlag: "--with-inspector",
     },
-    capabilities: [],
+    capabilities: [
+      {
+        id: "legacy",
+        label: "MCP v1 compatibility (legacy HTTP)",
+        description:
+          "Serve 2025-era initialize/tools/resources/prompts requests from older clients. Disable for modern-only strict serving.",
+        defaultEnabled: true,
+        env: { MCP_LEGACY: "stateless" },
+        envDisabled: { MCP_LEGACY: "reject" },
+      },
+    ],
     protocols: [],
   },
 ];
+
+/**
+ * Enabled capability ids. `undefined` means "runtime defaults"; an explicit
+ * array is authoritative, so `[]` disables everything.
+ */
+export function resolveCapabilities(
+  runtime: ResolvedRuntime,
+  requested: readonly string[] | undefined,
+): string[] {
+  if (requested === undefined) {
+    return runtime.capabilities.filter((entry) => entry.defaultEnabled).map((entry) => entry.id);
+  }
+  const known = new Set(runtime.capabilities.map((entry) => entry.id));
+  const unknown = requested.filter((id) => !known.has(id));
+  if (unknown.length > 0) {
+    const available = runtime.capabilities.map((entry) => entry.id).join(", ") || "none";
+    throw new Error(
+      `unknown capability ${unknown.join(", ")} for runtime "${runtime.id}" (available: ${available})`,
+    );
+  }
+  return [...new Set(requested)];
+}
+
+/** Environment implied by a resolved capability set. */
+export function capabilityEnv(
+  runtime: ResolvedRuntime,
+  enabled: readonly string[],
+): Record<string, string> {
+  const env: Record<string, string> = {};
+  for (const spec of runtime.capabilities) {
+    Object.assign(env, enabled.includes(spec.id) ? spec.env : spec.envDisabled);
+  }
+  return env;
+}
 
 export function listRuntimes(): ResolvedRuntime[] {
   return RUNTIME_SPECS.filter((spec) =>

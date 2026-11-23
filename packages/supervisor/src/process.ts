@@ -8,7 +8,13 @@ import fs from "node:fs";
 import net from "node:net";
 import { isWildcardHost, resolveMcpUrl } from "./network.js";
 import { ensureRunDirs } from "./paths.js";
-import { isInspectorBuilt, resolveRuntimeCommand, type ResolvedRuntime } from "./runtimes.js";
+import {
+  capabilityEnv,
+  isInspectorBuilt,
+  resolveCapabilities,
+  resolveRuntimeCommand,
+  type ResolvedRuntime,
+} from "./runtimes.js";
 
 export const STOP_TIMEOUT_MS = 8_000;
 const POLL_INTERVAL_MS = 100;
@@ -218,9 +224,14 @@ export async function waitForPort(
   }
 }
 
-export function workerEnv(port: number, host: string): NodeJS.ProcessEnv {
+export function workerEnv(
+  port: number,
+  host: string,
+  capabilityVariables: Record<string, string> = {},
+): NodeJS.ProcessEnv {
   return {
     ...process.env,
+    ...capabilityVariables,
     PORT: String(port),
     // mcp-use defaults its listen host to `localhost`, which resolves to a
     // different family depending on the machine — so always pin it explicitly.
@@ -238,7 +249,7 @@ export function workerEnv(port: number, host: string): NodeJS.ProcessEnv {
  */
 export function spawnDetachedWorker(
   runtime: ResolvedRuntime,
-  opts: { port: number; host: string; logFile: string },
+  opts: { port: number; host: string; logFile: string; capabilities?: readonly string[] },
 ): number {
   ensureRunDirs();
   const { cmd, args, shell } = resolveRuntimeCommand(runtime);
@@ -247,7 +258,11 @@ export function spawnDetachedWorker(
   try {
     const child = spawn(cmd, [...args, ...workerStartArgs(runtime, opts.port)], {
       cwd: runtime.packagePath,
-      env: workerEnv(opts.port, opts.host),
+      env: workerEnv(
+        opts.port,
+        opts.host,
+        capabilityEnv(runtime, resolveCapabilities(runtime, opts.capabilities)),
+      ),
       detached: true,
       stdio: ["ignore", fd, fd],
       shell,
@@ -271,11 +286,12 @@ export function spawnForegroundWorker(
   runtime: ResolvedRuntime,
   port: number,
   host: string,
+  capabilities?: readonly string[],
 ): ChildProcess {
   const { cmd, args, shell } = resolveRuntimeCommand(runtime);
   return spawn(cmd, [...args, ...workerStartArgs(runtime, port)], {
     cwd: runtime.packagePath,
-    env: workerEnv(port, host),
+    env: workerEnv(port, host, capabilityEnv(runtime, resolveCapabilities(runtime, capabilities))),
     stdio: "inherit",
     shell,
   });

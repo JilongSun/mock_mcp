@@ -29,7 +29,9 @@ export async function runWorkerCli(runtimeId: string): Promise<void> {
   type Command = "run" | "start" | "stop" | "status";
 
   const RUNTIME_ID = runtimeId;
-  const DEFAULT_PORT = getRuntime(RUNTIME_ID)?.defaultPort ?? 8760;
+  const RUNTIME = getRuntime(RUNTIME_ID);
+  const DEFAULT_PORT = RUNTIME?.defaultPort ?? 8760;
+  const CAPABILITIES = RUNTIME?.capabilities ?? [];
   /** How long `start` waits for the workers to actually bind their ports. */
   const DEFAULT_START_TIMEOUT_MS = 45_000;
 
@@ -45,7 +47,22 @@ export async function runWorkerCli(runtimeId: string): Promise<void> {
     /** Readiness budget for `start`. */
     timeoutMs: number;
     all: boolean;
+    /** Enabled capability ids; empty means the runtime defaults. */
+    capabilities: string[];
   }
+
+  const capabilityHelp =
+    CAPABILITIES.length === 0
+      ? ""
+      : [
+          "",
+          "  Capabilities:",
+          ...CAPABILITIES.map(
+            (entry) =>
+              `    ${entry.id.padEnd(12)} ${entry.label}${entry.defaultEnabled ? " (default: on)" : ""}`,
+          ),
+          `    Disable one with --no-<id>, e.g. --no-${CAPABILITIES[0].id}.`,
+        ].join("\n");
 
   const USAGE = `
   mock-mcp process manager
@@ -65,7 +82,11 @@ export async function runWorkerCli(runtimeId: string): Promise<void> {
     -w, --workers <n>   (start only) number of background workers (default: 1)
     -t, --timeout <s>   (start only) seconds to wait for readiness (default: 45)
     -a, --all           (stop) stop every worker of this runtime — the default
+    -c, --capabilities <ids>
+                        (run/start) comma-separated capability ids to enable;
+                        omit the flag to use the runtime defaults
     -h, --help          Show this help
+${capabilityHelp}
 
   Cold boot takes ~10-20s: "start" only reports success once every worker is
   actually listening, and rolls back the group if a worker dies or never binds.
@@ -107,6 +128,9 @@ export async function runWorkerCli(runtimeId: string): Promise<void> {
     let timeoutMs = DEFAULT_START_TIMEOUT_MS;
     let timeoutExplicit = false;
     let all = false;
+    /** Explicit list from -c/--capabilities; null keeps the runtime defaults. */
+    let capabilityList: string[] | null = null;
+    const disabledCapabilities = new Set<string>();
 
     for (let i = 0; i < rest.length; i++) {
       const arg = rest[i];
@@ -145,6 +169,19 @@ export async function runWorkerCli(runtimeId: string): Promise<void> {
           timeoutExplicit = true;
           break;
         }
+        case "-c":
+        case "--capabilities": {
+          const next = rest[++i];
+          if (next === undefined) fail(`${arg} requires a value`);
+          const requested = next.split(",").map((entry) => entry.trim()).filter(Boolean);
+          const unknown = requested.filter((id) => !CAPABILITIES.some((entry) => entry.id === id));
+          if (unknown.length > 0) {
+            const available = CAPABILITIES.map((entry) => entry.id).join(", ") || "none";
+            fail(`unknown capability ${unknown.join(", ")} (available: ${available})`);
+          }
+          capabilityList = requested;
+          break;
+        }
         case "-a":
         case "--all":
           all = true;
@@ -152,9 +189,29 @@ export async function runWorkerCli(runtimeId: string): Promise<void> {
         case "--":
           // Argument separator forwarded by pnpm (`pnpm start:v1 -- -w 3`) — ignore.
           break;
-        default:
+        default: {
+          // Generic per-capability switch: --no-legacy disables `legacy`.
+          const disabledId = arg.startsWith("--no-") ? arg.slice("--no-".length) : null;
+          if (disabledId !== null && CAPABILITIES.some((entry) => entry.id === disabledId)) {
+            disabledCapabilities.add(disabledId);
+            break;
+          }
           fail(`unknown option "${arg}"`);
+        }
       }
+    }
+
+    const capabilities =
+      capabilityList ??
+      CAPABILITIES.filter(
+        (entry) => entry.defaultEnabled && !disabledCapabilities.has(entry.id),
+      ).map((entry) => entry.id);
+
+    if (capabilityList !== null && command !== "run" && command !== "start") {
+      fail(`--capabilities only applies to "run" and "start"`);
+    }
+    if (disabledCapabilities.size > 0 && command !== "run" && command !== "start") {
+      fail(`--no-<capability> only applies to "run" and "start"`);
     }
 
     if (port - workers + 1 < 1) {
@@ -173,11 +230,15 @@ export async function runWorkerCli(runtimeId: string): Promise<void> {
       fail(`--all only applies to "stop"`);
     }
 
-    return { command, port, host, portExplicit, workers, timeoutMs, all };
+    return { command, port, host, portExplicit, workers, timeoutMs, all, capabilities };
   }
 
   // ─── Foreground (`run`) ─────────────────────────────────────────────────
-  async function runForeground(basePort: number, host: string): Promise<void> {
+  async function runForeground(
+    basePort: number,
+    host: string,
+    capabilities: string[],
+  ): Promise<void> {
     const runtime = getRuntime(RUNTIME_ID);
     if (!runtime) fail(`runtime "${RUNTIME_ID}" is not available in this workspace`);
 
@@ -185,7 +246,7 @@ export async function runWorkerCli(runtimeId: string): Promise<void> {
 
     console.log(`\n🚀 Running in the foreground on ${host}:${basePort}...\n`);
 
-    const child = spawnForegroundWorker(runtime, basePort, host);
+    const child = spawnForegroundWorker(runtime, basePort, host, capabilities);
     console.log(`  PID: ${child.pid ?? "starting..."}`);
     console.log(`\n✅ Running. Press Ctrl+C to stop.\n`);
 
@@ -229,6 +290,7 @@ export async function runWorkerCli(runtimeId: string): Promise<void> {
     workers: number,
     timeoutMs: number,
     host: string,
+    capabilities: string[],
   ): Promise<void> {
     const ports = portsFor(basePort, workers);
 
@@ -250,7 +312,13 @@ export async function runWorkerCli(runtimeId: string): Promise<void> {
     for (const port of ports) {
       let record;
       try {
-        record = await startWorker({ runtime: RUNTIME_ID, port, host, groupId });
+        record = await startWorker({
+          runtime: RUNTIME_ID,
+          port,
+          host,
+          groupId,
+          capabilities,
+        });
       } catch (err) {
         if (err instanceof SupervisorError) {
           console.error(`Error: ${err.message}\n`);
@@ -299,6 +367,14 @@ export async function runWorkerCli(runtimeId: string): Promise<void> {
     console.log(`   Group:  ${groupId}`);
     console.log(`   Ports:  ${records.map((record) => record.port).join(", ")}`);
     console.log(`   Bind:   ${host}`);
+    if (CAPABILITIES.length > 0) {
+      const disabled = CAPABILITIES.filter((entry) => !capabilities.includes(entry.id));
+      console.log(
+        `   Caps:   ${capabilities.join(", ") || "none"}${
+          disabled.length > 0 ? ` (disabled: ${disabled.map((entry) => entry.id).join(", ")})` : ""
+        }`,
+      );
+    }
     for (const url of accessUrls(host, basePort, "/mcp")) {
       const label = url.scope === "lan" ? "LAN:   " : "Local: ";
       console.log(`   ${label} ${url.url}`);
@@ -419,6 +495,9 @@ export async function runWorkerCli(runtimeId: string): Promise<void> {
         console.log(
           `    port ${worker.port}  PID ${worker.pid ?? "-"}  ${describeStatus(worker)}${conflict}`,
         );
+        if (CAPABILITIES.length > 0) {
+          console.log(`      caps: ${worker.capabilities.join(", ") || "none"}`);
+        }
         console.log(`      logs: ${worker.logFile}`);
       }
     }
@@ -464,7 +543,7 @@ export async function runWorkerCli(runtimeId: string): Promise<void> {
   try {
     switch (options.command) {
       case "run":
-        await runForeground(options.port, options.host);
+        await runForeground(options.port, options.host, options.capabilities);
         break;
       case "start":
         await startBackground(
@@ -472,6 +551,7 @@ export async function runWorkerCli(runtimeId: string): Promise<void> {
           options.workers,
           options.timeoutMs,
           options.host,
+          options.capabilities,
         );
         break;
       case "stop":

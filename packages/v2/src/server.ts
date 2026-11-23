@@ -1,3 +1,4 @@
+import { env } from "node:process";
 import { MCPServer, acceptedContent, inputRequired, inputResponse, text } from "mcp-use";
 import { z } from "zod";
 import {
@@ -34,6 +35,10 @@ function markdownResource(uri: URL, content: string) {
 }
 
 // ─── Server ──────────────────────────────────────────────────────────
+// Read through node:process so the value survives bundling: the build inlines
+// `process.env`, but keeps Node builtins external.
+const legacy: "stateless" | "reject" = env.MCP_LEGACY === "reject" ? "reject" : "stateless";
+
 export const server = new MCPServer({
   name: "enterprise-ops-hub",
   title: "Enterprise Operations Hub",
@@ -42,7 +47,7 @@ export const server = new MCPServer({
     "Enterprise operations platform providing team directory, product catalog, order management, knowledge base, location intelligence, analytics, and DevOps monitoring — all accessible through MCP tools, resources, prompts, and interactive visual widgets.",
   instructions:
     "You have access to the Enterprise Operations Hub. Use the tools to search users, browse products, manage orders, explore locations, generate reports, search the knowledge base, and monitor system health. Use the visual widgets for rich data presentation. For sensitive actions, use the approval workflow tools.",
-  legacy: "stateless",
+  legacy,
 });
 
 export default server;

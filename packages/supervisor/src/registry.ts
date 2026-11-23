@@ -8,11 +8,12 @@
 import fs from "node:fs";
 import path from "node:path";
 import { LOOPBACK_HOST } from "./network.js";
+import { getRuntime, resolveCapabilities } from "./runtimes.js";
 import { LEGACY_STATE_FILE, LOG_DIR, STATE_FILE, ensureRunDirs } from "./paths.js";
 import type { RegistryState, WorkerRecord } from "./types.js";
 
-// v3 added `host`; v2 and the legacy job file are read with a loopback default.
-const STATE_VERSION = 3;
+// v3 added `host`; v4 made `capabilities` an explicit enabled set ([] = none).
+const STATE_VERSION = 4;
 
 export function workerIdFor(port: number): string {
   return `w-${port}`;
@@ -78,9 +79,15 @@ function migrateLegacy(raw: string): RegistryState | null {
  */
 let registryFault: string | null = null;
 
-/** Fill in fields added after a record was written (currently `host`). */
-function normalizeWorker(worker: WorkerRecord): WorkerRecord {
-  return { ...worker, host: worker.host ?? LOOPBACK_HOST };
+/** Fill in fields added after a record was written. */
+function normalizeWorker(worker: WorkerRecord, version: number): WorkerRecord {
+  const normalized = { ...worker, host: worker.host ?? LOOPBACK_HOST };
+  // Before v4 an empty list meant "runtime defaults", not "no capabilities".
+  if (version < 4 && normalized.capabilities.length === 0) {
+    const runtime = getRuntime(normalized.runtime);
+    if (runtime) normalized.capabilities = resolveCapabilities(runtime, undefined);
+  }
+  return normalized;
 }
 
 function readState(): RegistryState {
@@ -90,7 +97,9 @@ function readState(): RegistryState {
       registryFault = null;
       return {
         version: parsed.version ?? STATE_VERSION,
-        workers: parsed.workers.map(normalizeWorker),
+        workers: parsed.workers.map((worker) =>
+          normalizeWorker(worker, parsed.version ?? STATE_VERSION),
+        ),
       };
     }
     registryFault = `${STATE_FILE} has no "workers" array`;
