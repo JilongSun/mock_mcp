@@ -104,6 +104,17 @@ vice versa.
 The same commands are available as `run:v2`, `start:v2`, `status:v2`, and `stop:v2`;
 v2 defaults to port `8770`. Status and stop are scoped to the selected runtime.
 
+Capabilities are chosen at startup. v2 exposes one, `legacy` (MCP v1 compatibility), which is on by
+default. Disable it for a modern-only worker:
+
+```bash
+pnpm start:v2 -- --no-legacy        # 2025-era clients get -32022 Unsupported protocol version
+pnpm start:v2 -- -c legacy          # explicit list; -c "" disables everything
+```
+
+The console offers the same choice as checkboxes in **New worker** and shows the recorded set in the
+worker details. Restart or re-create a worker to change its capabilities.
+
 `start` waits for the server to **actually bind its port** before reporting success —
 cold boot takes ~10–20s and `mcp-use` prints nothing in the meantime, so an
 immediate success message would be misleading. If a worker dies or never binds, the
@@ -279,7 +290,7 @@ For v1, widgets (`ui://widget/*`) are HTTP-only. Its other capabilities are avai
 The v2 runtime currently provides HTTP only. Modern clients send protocol version and client
 metadata on each request and use multi-round-trip requests for roots, elicitation and sampling.
 Older HTTP clients can initialize and use tools, resources, prompts and MCP Apps through stateless
-compatibility. Unlike v1, the v2 SDK does not retain legacy client capabilities per session:
+compatibility, unless the worker was started with the `legacy` capability disabled. Unlike v1, the v2 SDK does not retain legacy client capabilities per session:
 legacy roots, elicitation and sampling may be reported unsupported even when advertised.
 Use v1 when those legacy interactions or stdio are required.
 

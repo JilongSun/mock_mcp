@@ -257,20 +257,13 @@ pnpm build:v2:inspector   # instead of pnpm build:v2
 - **Loopback by default, LAN on request.** `--host` only accepts `127.0.0.1` or `0.0.0.0`; other
   values are refused. This is a mock/testing tool, so no authentication is built in — an auth mode
   would itself be an optional thing to test.
-- **Reserved fields.** Every record already carries `capabilities` and `protocol`, and every runtime
-  can advertise capability/protocol options. Nothing consumes them yet; the detail panel shows them
-  read-only so the data model does not have to change when those features land.
-
----
-
-## Roadmap hooks
-
-The next two features on this console are already prepared:
-
-1. **Per-worker capabilities** — choose which capability groups a worker starts with
-   (`capabilities: []` currently means "runtime default = all").
-2. **Protocol override per worker** — `protocol: null` currently means "decided by the
-   runtime". The runtime selector already offers the implemented v1 and v2 packages.
+- **Per-worker capabilities.** Runtimes declare the capability groups they support; the new-worker
+  form shows them as checkboxes and the selection is stored on the record and applied on every
+  start/restart. Today `v2` exposes one: `legacy` (MCP v1 compatibility, on by default). Disabling
+  it starts the worker modern-only, so 2025-era requests get `-32022 Unsupported protocol version`.
+  The CLI mirrors this with `-c/--capabilities <ids>` and `--no-legacy`.
+- **Protocol override is still reserved.** `protocol: null` means "decided by the runtime"; the
+  detail panel shows the field read-only.
 
 ---
 

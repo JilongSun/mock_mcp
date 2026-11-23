@@ -235,20 +235,11 @@ pnpm build:v2:inspector   # 用它代替 pnpm build:v2
   轮询即可恢复。
 - **默认回环，按需开局域网。** `--host` 只接受 `127.0.0.1` 或 `0.0.0.0`，其他取值直接拒绝。
   这是一个 mock/测试工具，因此不内置鉴权 —— 鉴权本身将来更适合作为一个可选的测试能力。
-- **预留字段。** 每条记录都已带有 `capabilities` 与 `protocol`，每个运行时也可以声明可选的
-  capability/protocol 项。目前没有任何逻辑消费它们，详情面板只读展示，以便这些能力落地时不必
-  改动数据模型。
-
----
-
-## 后续扩展的挂载点
-
-控制台接下来的两个功能已经预留好位置：
-
-1. **per-worker capability** —— 选择 worker 启动时启用哪些能力组（当前 `capabilities: []` 表示
-   “运行时默认，即全部”）。
-2. **per-worker 协议覆盖** —— 当前 `protocol: null` 表示“由运行时决定”。
-   运行时选择器已经提供实现好的 v1 和 v2 包。
+- **per-worker capability 已可用。** 运行时声明自己支持的能力组；新增 worker 表单以勾选框展示，
+  选择结果记录在 worker 记录中，并在每次启动/重启时生效。目前 `v2` 提供一个：`legacy`
+  （MCP v1 兼容，默认开启）。取消勾选后 worker 以 modern-only 启动，2025 时代的请求会收到
+  `-32022 Unsupported protocol version`。CLI 对应 `-c/--capabilities <ids>` 与 `--no-legacy`。
+- **per-worker 协议覆盖仍为预留。** `protocol: null` 表示“由运行时决定”，详情面板只读展示。
 
 ---
 

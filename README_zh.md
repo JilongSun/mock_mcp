@@ -99,6 +99,16 @@ pnpm stop:v1 -- --port 8760     # 只停止该端口上的 worker
 v2 同样支持 `run:v2`、`start:v2`、`status:v2` 和 `stop:v2`，默认端口为 `8770`。
 状态和停止命令只作用于所选运行时。
 
+能力在启动时选择。v2 提供 `legacy`（MCP v1 兼容），默认开启。需要 modern-only 时关闭它：
+
+```bash
+pnpm start:v2 -- --no-legacy        # 旧客户端会收到 -32022 Unsupported protocol version
+pnpm start:v2 -- -c legacy          # 显式列表；-c "" 表示全部关闭
+```
+
+控制台的**新增 worker**表单提供同样的勾选项，详情面板展示已记录的能力集合。
+修改能力需要重启或重建 worker。
+
 `start` 会等待服务**真正绑定端口**后才报告成功 —— 冷启动需要 ~10–20 秒，期间
 `mcp-use` 不输出任何日志，若立刻报成功会非常误导。如果 worker 退出或始终没有绑定端口，
 该分组会被回滚（停掉并从注册表中移除），`start` 以非零码退出。可用 `--timeout <秒>`
@@ -264,7 +274,7 @@ v1 的小组件（`ui://widget/*`）仅支持 HTTP，其余能力可通过 stdio
 
 v2 当前仅提供 HTTP。新客户端需在每次请求中携带协议版本和客户端元数据，roots、
 elicitation、sampling 使用多轮请求。旧 HTTP 客户端可通过无状态兼容模式初始化并使用工具、
-资源、提示词和 MCP Apps；但 v2 SDK 不保存旧客户端的会话能力，因此即使客户端声明支持，
+资源、提示词和 MCP Apps（若该 worker 关闭了 `legacy` 能力则不可用）；但 v2 SDK 不保存旧客户端的会话能力，因此即使客户端声明支持，
 roots、elicitation 和 sampling 仍可能被报告为不支持。需要这些旧版交互或 stdio 时请使用 v1。
 
 ---
