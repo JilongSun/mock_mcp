@@ -24,6 +24,7 @@ export function NewWorkerForm({
   const [port, setPort] = useState(String(runtimes[0]?.defaultPort ?? 8760));
   const [count, setCount] = useState("1");
   const [name, setName] = useState("");
+  const [disabledCapabilities, setDisabledCapabilities] = useState<string[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [plannedPorts, setPlannedPorts] = useState<number[]>([]);
@@ -40,6 +41,11 @@ export function NewWorkerForm({
   useEffect(() => {
     if (runtime && port === "") setPort(String(runtime.defaultPort));
   }, [runtime, port]);
+
+  // Capability choices belong to a runtime, so switching runtimes starts clean.
+  useEffect(() => {
+    setDisabledCapabilities([]);
+  }, [runtimeId]);
 
   // Preview which ports auto-assignment would pick, so nobody is surprised by it.
   useEffect(() => {
@@ -83,12 +89,19 @@ export function NewWorkerForm({
 
     setSubmitting(true);
     try {
+      const enabledCapabilities = (runtime?.capabilities ?? []).filter(
+        (capability) => !disabledCapabilities.includes(capability.id),
+      );
       const response = await api.createWorkers({
         runtime: runtimeId,
         host,
         port: requestedPort,
         count: parsedCount,
         ...(name.trim() === "" ? {} : { name: name.trim() }),
+        // Send the explicit set (even when empty) so unchecking everything disables all.
+        ...((runtime?.capabilities.length ?? 0) > 0
+          ? { capabilities: enabledCapabilities.map((capability) => capability.id) }
+          : {}),
       });
       onCreated(response.workers);
     } catch (err) {
@@ -194,6 +207,42 @@ export function NewWorkerForm({
           />
         </label>
       </div>
+
+      {runtime !== undefined && runtime.capabilities.length > 0 && (
+        <fieldset className="mt-3 rounded-lg border border-line bg-surface-muted p-3">
+          <legend className="px-1 text-[11px] uppercase tracking-wider text-ink-faint">
+            {t("form.capabilities")}
+          </legend>
+          <ul className="space-y-2">
+            {runtime.capabilities.map((capability) => (
+              <li key={capability.id}>
+                <label className="flex items-start gap-2 text-[12.5px] text-ink-soft">
+                  <input
+                    type="checkbox"
+                    className="mt-0.5"
+                    checked={!disabledCapabilities.includes(capability.id)}
+                    onChange={(event) =>
+                      setDisabledCapabilities((previous) =>
+                        event.target.checked
+                          ? previous.filter((id) => id !== capability.id)
+                          : [...previous, capability.id],
+                      )
+                    }
+                  />
+                  <span>
+                    {capability.label}
+                    {capability.description && (
+                      <span className="mt-0.5 block text-[11.5px] leading-snug text-ink-faint">
+                        {capability.description}
+                      </span>
+                    )}
+                  </span>
+                </label>
+              </li>
+            ))}
+          </ul>
+        </fieldset>
+      )}
 
       <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
         <p className="text-[12px] text-ink-faint">

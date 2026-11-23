@@ -45,7 +45,7 @@ export interface WorkerDto {
   desiredState: "running" | "stopped";
   groupId: string;
   logFile: string;
-  /** Reserved: empty means "all capabilities". */
+  /** Enabled capability ids; `[]` means none. */
   capabilities: string[];
   /** Reserved: protocol selection for this worker. */
   protocol: { mcpVersion: string; legacy?: string } | null;
@@ -71,6 +71,7 @@ export interface WorkersResponseDto {
 export interface CapabilityDto {
   id: string;
   label: string;
+  description?: string;
   defaultEnabled: boolean;
 }
 
@@ -85,9 +86,9 @@ export interface RuntimeDto {
   label: string;
   description: string;
   defaultPort: number;
-  /** Reserved: empty until per-worker capability selection lands. */
+  /** Capability groups a worker of this runtime may start with. */
   capabilities: CapabilityDto[];
-  /** Reserved: empty until MCP v1/v2 selection lands. */
+  /** Reserved: protocol era options (not wired up yet). */
   protocols: ProtocolDto[];
 }
 

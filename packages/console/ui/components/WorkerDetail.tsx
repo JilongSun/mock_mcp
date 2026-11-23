@@ -181,20 +181,12 @@ export function WorkerDetail({
           </ul>
         </div>
 
-        <div className="mt-6 flex items-center gap-2">
-          <h3 className="text-[11px] uppercase tracking-wider text-ink-faint">
-            {t("detail.reserved")}
-          </h3>
-          <span className="chip border border-warn-line bg-warn-soft text-warn">
-            {t("detail.planned")}
-          </span>
-        </div>
+        <h3 className="mt-6 text-[11px] uppercase tracking-wider text-ink-faint">
+          {t("detail.capabilities")}
+        </h3>
 
         <section className="mt-3 rounded-lg border border-line bg-surface-muted p-3">
-          <div className="text-[12.5px] font-medium text-ink-soft">
-            {t("detail.capabilities")}
-          </div>
-          <p className="mt-1 text-[12px] leading-relaxed text-ink-faint">
+          <p className="text-[12px] leading-relaxed text-ink-faint">
             {t("detail.capabilitiesHint")}
           </p>
           {capabilities.length === 0 ? (
@@ -210,11 +202,7 @@ export function WorkerDetail({
                   <input
                     type="checkbox"
                     disabled
-                    defaultChecked={
-                      worker.capabilities.length === 0
-                        ? capability.defaultEnabled
-                        : worker.capabilities.includes(capability.id)
-                    }
+                    defaultChecked={worker.capabilities.includes(capability.id)}
                   />
                   <span className="text-ink-soft">{capability.label}</span>
                 </li>
@@ -225,6 +213,15 @@ export function WorkerDetail({
             <p className="mt-1 text-[12px] text-ink-faint">{t("detail.noneYet")}</p>
           )}
         </section>
+
+        <div className="mt-6 flex items-center gap-2">
+          <h3 className="text-[11px] uppercase tracking-wider text-ink-faint">
+            {t("detail.reserved")}
+          </h3>
+          <span className="chip border border-warn-line bg-warn-soft text-warn">
+            {t("detail.planned")}
+          </span>
+        </div>
 
         <section className="mt-3 rounded-lg border border-line bg-surface-muted p-3">
           <div className="text-[12.5px] font-medium text-ink-soft">

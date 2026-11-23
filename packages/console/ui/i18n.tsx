@@ -104,6 +104,7 @@ const DICT = {
   "form.count": { zh: "数量", en: "Count" },
   "form.port": { zh: "起始端口", en: "Base port" },
   "form.portAuto": { zh: "自动分配", en: "Auto-assign" },
+  "form.capabilities": { zh: "能力（启动时生效）", en: "Capabilities (applied at startup)" },
   "form.name": { zh: "名称（可选）", en: "Name (optional)" },
   "form.nameHint": { zh: "留空则使用 worker-<端口>", en: "Defaults to worker-<port>" },
   "form.hint": {
@@ -132,8 +133,8 @@ const DICT = {
   "detail.reserved": { zh: "待实现（已预留数据结构）", en: "Planned (data model already reserved)" },
   "detail.capabilities": { zh: "Capability 选择", en: "Capability selection" },
   "detail.capabilitiesHint": {
-    zh: "启动时选择启用哪些 capability。当前 worker 使用运行时默认全集。",
-    en: "Choose which capabilities a worker starts with. Workers currently get the runtime default set.",
+    zh: "该 worker 启动时启用的能力。新增 worker 时可选择，已在运行的 worker 需重建后生效。",
+    en: "Capabilities this worker started with. Choose them when creating a worker; changing them requires re-creating it.",
   },
   "detail.protocol": { zh: "MCP 协议版本", en: "MCP protocol version" },
   "detail.protocolHint": {
@@ -143,7 +144,7 @@ const DICT = {
   "detail.allCapabilities": { zh: "全部（运行时默认）", en: "All (runtime default)" },
   "detail.runtimeDefault": { zh: "运行时默认", en: "Runtime default" },
   "detail.planned": { zh: "规划中", en: "Planned" },
-  "detail.noneYet": { zh: "该运行时尚未提供可选项。", en: "This runtime exposes no options yet." },
+  "detail.noneYet": { zh: "该运行时没有可配置的能力。", en: "This runtime exposes no configurable capabilities." },
 
   "inspector.title": { zh: "MCP 调试台", en: "MCP Inspector" },
   "inspector.disabledNotRunning": {

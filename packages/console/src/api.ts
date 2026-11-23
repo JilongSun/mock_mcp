@@ -109,7 +109,12 @@ function runtimesPayload(): RuntimeDto[] {
     label: runtime.label,
     description: runtime.description,
     defaultPort: runtime.defaultPort,
-    capabilities: runtime.capabilities,
+    capabilities: runtime.capabilities.map(({ id, label, description, defaultEnabled }) => ({
+      id,
+      label,
+      ...(description === undefined ? {} : { description }),
+      defaultEnabled,
+    })),
     protocols: runtime.protocols,
   }));
 }
@@ -340,7 +345,7 @@ async function createWorkers(
 
   const groupId = groupIdFor(count, ports[0]);
   const baseName = typeof body.name === "string" ? body.name.trim() : "";
-  const capabilities = Array.isArray(body.capabilities) ? body.capabilities : [];
+  const capabilities = Array.isArray(body.capabilities) ? body.capabilities : undefined;
   const protocol = (body.protocol ?? null) as WorkerProtocol | null;
 
   const started: WorkerRecord[] = [];
